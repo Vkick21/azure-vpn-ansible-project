@@ -235,6 +235,8 @@ resource "azurerm_lb_rule" "http" {
 
 
 resource "azurerm_public_ip" "bastion" {
+  count               = var.enable_bastion ? 1 : 0
+
   name                = "pip-bastion"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -244,6 +246,7 @@ resource "azurerm_public_ip" "bastion" {
 }
 
 resource "azurerm_bastion_host" "main" {
+  count = local.full ? 1 : 0
   name                = "bastion-helpdesk"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -251,11 +254,13 @@ resource "azurerm_bastion_host" "main" {
   ip_configuration {
     name                 = "configuration"
     subnet_id            = azurerm_subnet.bastion.id
-    public_ip_address_id = azurerm_public_ip.bastion.id
+    public_ip_address_id = azurerm_public_ip.bastion[0].id
   }
 }
 
 resource "azurerm_public_ip" "vpn" {
+  count               = var.enable_vpn ? 1 : 0
+
   name                = "pip-vpn-gateway"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -267,6 +272,8 @@ resource "azurerm_public_ip" "vpn" {
 }
 
 resource "azurerm_virtual_network_gateway" "vpn" {
+  count = var.enable_vpn ? 1 : 0
+
   name                = "vpn-helpdesk"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -274,11 +281,11 @@ resource "azurerm_virtual_network_gateway" "vpn" {
   type     = "Vpn"
   vpn_type = "RouteBased"
 
-  sku = "VpnGw1AZ"
+  sku = local.full ? "VpnGw1AZ" : "VpnGw1"
 
   ip_configuration {
     name                          = "vpnGatewayConfig"
-    public_ip_address_id          = azurerm_public_ip.vpn.id
+    public_ip_address_id          = azurerm_public_ip.vpn[0].id
     private_ip_address_allocation = "Dynamic"
     subnet_id                     = azurerm_subnet.gateway.id
   }
