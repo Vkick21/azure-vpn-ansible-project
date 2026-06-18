@@ -25,10 +25,10 @@ resource "azurerm_subnet" "management" {
 }
 
 resource "azurerm_subnet" "gateway" {
-  name = "GatewaySubnet"
+  name                 = "GatewaySubnet"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes = ["10.10.3.0/24"]
+  address_prefixes     = ["10.10.3.0/24"]
 }
 
 
@@ -101,7 +101,7 @@ resource "azurerm_network_security_group" "app" {
     destination_port_range     = "80"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-}
+  }
 }
 
 resource "azurerm_network_interface_security_group_association" "helpdesk01" {
@@ -228,23 +228,23 @@ resource "azurerm_lb_rule" "http" {
 
 resource "azurerm_public_ip" "bastion" {
   name                = "pip-bastion"
- location            = azurerm_resource_group.main.location
- resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
 
- allocation_method = "Static"
- sku               = "Standard"
+  allocation_method = "Static"
+  sku               = "Standard"
 }
 
 resource "azurerm_bastion_host" "main" {
   name                = "bastion-helpdesk"
- location            = azurerm_resource_group.main.location
- resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
 
-ip_configuration {
-   name                 = "configuration"
-   subnet_id            = azurerm_subnet.bastion.id
-   public_ip_address_id = azurerm_public_ip.bastion.id
- }
+  ip_configuration {
+    name                 = "configuration"
+    subnet_id            = azurerm_subnet.bastion.id
+    public_ip_address_id = azurerm_public_ip.bastion.id
+  }
 }
 
 resource "azurerm_public_ip" "vpn" {
@@ -276,3 +276,35 @@ resource "azurerm_virtual_network_gateway" "vpn" {
   }
 }
 
+resource "azurerm_storage_account" "helpdesk" {
+  name                = "helpdesk${random_string.storage.result}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "random_string" "storage" {
+  length  = 6
+  special = false
+  upper   = false
+}
+
+resource "azurerm_storage_container" "attachments" {
+  name                  = "attachments"
+  storage_account_id    = azurerm_storage_account.helpdesk.id
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_container" "documentation" {
+  name                  = "documentation"
+  storage_account_id    = azurerm_storage_account.helpdesk.id
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_container" "backups" {
+  name                  = "backups"
+  storage_account_id    = azurerm_storage_account.helpdesk.id
+  container_access_type = "private"
+}
