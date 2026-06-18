@@ -73,6 +73,10 @@ resource "azurerm_linux_virtual_machine" "helpdesk01" {
     sku       = "server"
     version   = "latest"
   }
+
+  identity {
+    type = "SystemAssigned"
+  }
 }
 
 resource "azurerm_network_security_group" "app" {
@@ -158,6 +162,10 @@ resource "azurerm_linux_virtual_machine" "helpdesk02" {
     offer     = "ubuntu-24_04-lts"
     sku       = "server"
     version   = "latest"
+  }
+
+  identity {
+    type = "SystemAssigned"
   }
 }
 
@@ -350,6 +358,10 @@ resource "azurerm_linux_virtual_machine" "ansible" {
     sku       = "server"
     version   = "latest"
   }
+
+  identity {
+    type = "SystemAssigned"
+  }
 }
 
 resource "azurerm_network_interface_security_group_association" "ansible" {
@@ -366,4 +378,138 @@ resource "azurerm_log_analytics_workspace" "main" {
   retention_in_days = 30
 }
 
+resource "azurerm_monitor_data_collection_rule" "main" {
+  name                = "dcr-helpdesk-prod"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+
+  kind = "Linux"
+
+  destinations {
+    log_analytics {
+      name                  = "la-328748078"
+      workspace_resource_id = azurerm_log_analytics_workspace.main.id
+    }
+  }
+
+  data_flow {
+    streams       = ["Microsoft-Perf"]
+    destinations  = ["la-328748078"]
+    output_stream = "Microsoft-Perf"
+    transform_kql = "source"
+  }
+
+  data_flow {
+    streams       = ["Microsoft-Syslog"]
+    destinations  = ["la-328748078"]
+    output_stream = "Microsoft-Syslog"
+    transform_kql = "source"
+  }
+
+  data_sources {
+    performance_counter {
+      name                          = "perfCounterDataSource60"
+      streams                       = ["Microsoft-Perf"]
+      sampling_frequency_in_seconds = 60
+
+      counter_specifiers = [
+        "Processor(*)\\% Processor Time",
+        "Processor(*)\\% Idle Time",
+        "Processor(*)\\% User Time",
+        "Processor(*)\\% Nice Time",
+        "Processor(*)\\% Privileged Time",
+        "Processor(*)\\% IO Wait Time",
+        "Processor(*)\\% Interrupt Time",
+        "Memory(*)\\Available MBytes Memory",
+        "Memory(*)\\% Available Memory",
+        "Memory(*)\\Used Memory MBytes",
+        "Memory(*)\\% Used Memory",
+        "Memory(*)\\Pages/sec",
+        "Memory(*)\\Page Reads/sec",
+        "Memory(*)\\Page Writes/sec",
+        "Memory(*)\\Available MBytes Swap",
+        "Memory(*)\\% Available Swap Space",
+        "Memory(*)\\Used MBytes Swap Space",
+        "Memory(*)\\% Used Swap Space",
+        "Process(*)\\Pct User Time",
+        "Process(*)\\Pct Privileged Time",
+        "Process(*)\\Used Memory",
+        "Process(*)\\Virtual Shared Memory",
+        "Logical Disk(*)\\% Free Inodes",
+        "Logical Disk(*)\\% Used Inodes",
+        "Logical Disk(*)\\Free Megabytes",
+        "Logical Disk(*)\\% Free Space",
+        "Logical Disk(*)\\% Used Space",
+        "Logical Disk(*)\\Logical Disk Bytes/sec",
+        "Logical Disk(*)\\Disk Read Bytes/sec",
+        "Logical Disk(*)\\Disk Write Bytes/sec",
+        "Logical Disk(*)\\Disk Transfers/sec",
+        "Logical Disk(*)\\Disk Reads/sec",
+        "Logical Disk(*)\\Disk Writes/sec",
+        "Network(*)\\Total Bytes Transmitted",
+        "Network(*)\\Total Bytes Received",
+        "Network(*)\\Total Bytes",
+        "Network(*)\\Total Packets Transmitted",
+        "Network(*)\\Total Packets Received",
+        "Network(*)\\Total Rx Errors",
+        "Network(*)\\Total Tx Errors",
+        "Network(*)\\Total Collisions",
+        "System(*)\\Uptime",
+        "System(*)\\Load1",
+        "System(*)\\Load5",
+        "System(*)\\Load15",
+        "System(*)\\Users",
+        "System(*)\\Unique Users",
+        "System(*)\\CPUs"
+      ]
+    }
+
+    syslog {
+      name = "sysLogsDataSource-1688419672"
+
+      streams = [
+        "Microsoft-Syslog"
+      ]
+
+      facility_names = [
+        "alert",
+        "audit",
+        "auth",
+        "authpriv",
+        "clock",
+        "cron",
+        "daemon",
+        "ftp",
+        "kern",
+        "local0",
+        "local1",
+        "local2",
+        "local3",
+        "local4",
+        "local5",
+        "local6",
+        "local7",
+        "lpr",
+        "mail",
+        "news",
+        "nopri",
+        "ntp",
+        "syslog",
+        "user",
+        "uucp"
+      ]
+
+      log_levels = [
+        "Debug",
+        "Info",
+        "Notice",
+        "Warning",
+        "Error",
+        "Critical",
+        "Alert",
+        "Emergency"
+      ]
+    }
+  }
+}
 
