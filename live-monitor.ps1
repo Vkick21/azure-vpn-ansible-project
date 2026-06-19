@@ -1,3 +1,4 @@
+# Monitor pilnuje godzin pracy i ogranicza koszt uruchomionych VM.
 $base = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # =========================

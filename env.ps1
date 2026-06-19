@@ -1,49 +1,59 @@
 param(
-    [string]$Action
+    [Parameter(Mandatory = $true)]
+    [ValidateSet("start", "stop", "restart", "status", "plan")]
+    [string]$Action,
+
+    [string]$ResourceGroup = "rg-helpdesk-prod"
 )
 
-Set-Location "C:\Projects\terraform"
+Set-StrictMode -Version Latest
+
+# Skrypt działa zawsze względem katalogu projektu.
+Set-Location $PSScriptRoot
+
+# Tylko te maszyny tworzą warstwę aplikacyjną.
+$VmNames = @("helpdesk01", "helpdesk02")
 
 switch ($Action)
 {
     "start" {
-        Write-Host "Starting infrastructure (Terraform apply)..."
-        terraform apply -auto-approve
+        # Uruchamiamy VM bez zmieniania pozostałej infrastruktury.
+        Write-Host "Starting compute layer..."
+        foreach ($VmName in $VmNames) {
+            az vm start --resource-group $ResourceGroup --name $VmName
+        }
     }
 
     "stop" {
+        # Deallocate zatrzymuje naliczanie kosztu mocy obliczeniowej.
         Write-Host "Stopping compute layer only..."
-
-        # ONLY COMPUTE — safe cost reduction
-        az vm deallocate -g rg-helpdesk-prod -n helpdesk01
-        az vm deallocate -g rg-helpdesk-prod -n helpdesk02
-        az vm deallocate -g rg-helpdesk-prod -n ansible-mgmt
+        foreach ($VmName in $VmNames) {
+            az vm deallocate --resource-group $ResourceGroup --name $VmName
+        }
 
         Write-Host "Compute stopped. Network + VPN preserved."
     }
 
     "restart" {
-        Write-Host "Restart cycle..."
-        az vm start -g rg-helpdesk-prod -n helpdesk01
-        az vm start -g rg-helpdesk-prod -n helpdesk02
-        az vm start -g rg-helpdesk-prod -n ansible-mgmt
+        # Restart przydaje się po zmianach systemowych na VM.
+        Write-Host "Restarting compute layer..."
+        foreach ($VmName in $VmNames) {
+            az vm restart --resource-group $ResourceGroup --name $VmName
+        }
     }
 
     "status" {
+        # Pokazujemy osobno VM i bramę VPN.
         Write-Host "VM status:"
-        az vm list -d -g rg-helpdesk-prod -o table
+        az vm list --show-details --resource-group $ResourceGroup --output table
 
-        Write-Host "`nVPN status:"
-        az network vnet-gateway list -g rg-helpdesk-prod -o table
+        Write-Host ""
+        Write-Host "VPN status:"
+        az network vnet-gateway list --resource-group $ResourceGroup --output table
     }
 
     "plan" {
+        # Plan tylko pokazuje zmiany i niczego nie wdraża.
         terraform plan
-    }
-
-    "full-reset" {
-        Write-Host "DANGER: full terraform destroy + apply"
-        terraform destroy -auto-approve
-        terraform apply -auto-approve
     }
 }

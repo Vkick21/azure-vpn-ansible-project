@@ -1,0 +1,31 @@
+---
+- name: Przygotuj użytkowników środowiska HelpDesk
+  hosts: helpdesk
+  become: true
+
+  # Lista użytkowników jest oddzielona od logiki playbooka.
+  vars_files:
+    - clients.yml
+
+  tasks:
+    # Konto powstaje tylko na przypisanym serwerze.
+    - name: Utwórz użytkownika klienta
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        state: present
+        shell: /bin/bash
+        create_home: true
+      loop: "{{ clients }}"
+      when: inventory_hostname == item.vm
+
+    # Plik powitalny potwierdza poprawne przypisanie użytkownika.
+    - name: Dodaj wiadomość powitalną
+      ansible.builtin.copy:
+        content: "Welcome {{ item.name }} - Helpdesk environment active
+"
+        dest: "/home/{{ item.name }}/welcome.txt"
+        owner: "{{ item.name }}"
+        group: "{{ item.name }}"
+        mode: "0644"
+      loop: "{{ clients }}"
+      when: inventory_hostname == item.vm

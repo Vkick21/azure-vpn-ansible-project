@@ -2,6 +2,7 @@
 *.tfstate
 *.tfstate.backup
 *.tfvars
+*.tfplan
 .terraform.lock.hcl
 state-before.txt
 state-full.txt

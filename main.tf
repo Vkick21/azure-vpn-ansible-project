@@ -1,8 +1,10 @@
+# Główna grupa przechowuje wszystkie zasoby środowiska HelpDesk.
 resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name
   location = var.location
 }
 
+# Wspólna sieć prywatna dla aplikacji, administracji i VPN.
 resource "azurerm_virtual_network" "main" {
   name                = "vnet-helpdesk"
   address_space       = ["10.10.0.0/16"]
@@ -10,6 +12,7 @@ resource "azurerm_virtual_network" "main" {
   resource_group_name = azurerm_resource_group.main.name
 }
 
+# Podsieć aplikacji przeznaczona dla serwerów HelpDesk.
 resource "azurerm_subnet" "app" {
   name                 = "subnet-app"
   resource_group_name  = azurerm_resource_group.main.name
@@ -32,6 +35,7 @@ resource "azurerm_subnet" "gateway" {
 }
 
 
+# Pierwszy serwer aplikacyjny.
 resource "azurerm_network_interface" "helpdesk01" {
   name                = "nic-helpdesk01"
   location            = azurerm_resource_group.main.location
@@ -79,6 +83,7 @@ resource "azurerm_linux_virtual_machine" "helpdesk01" {
   }
 }
 
+# Reguły sieciowe dopuszczają SSH i ruch HTTP do serwerów.
 resource "azurerm_network_security_group" "app" {
   name                = "nsg-app"
   location            = azurerm_resource_group.main.location
@@ -113,6 +118,7 @@ resource "azurerm_network_interface_security_group_association" "helpdesk01" {
   network_security_group_id = azurerm_network_security_group.app.id
 }
 
+# Dedykowana podsieć wymagana przez Azure Bastion.
 resource "azurerm_subnet" "bastion" {
   name                 = "AzureBastionSubnet"
   resource_group_name  = azurerm_resource_group.main.name
@@ -122,6 +128,7 @@ resource "azurerm_subnet" "bastion" {
 }
 
 
+# Drugi serwer aplikacyjny.
 resource "azurerm_network_interface" "helpdesk02" {
   name                = "nic-helpdesk02"
   location            = azurerm_resource_group.main.location
@@ -174,6 +181,7 @@ resource "azurerm_network_interface_security_group_association" "helpdesk02" {
   network_security_group_id = azurerm_network_security_group.app.id
 }
 
+# Publiczny Load Balancer rozdziela ruch HTTP między obie VM.
 resource "azurerm_public_ip" "lb" {
   name                = "pip-helpdesk-lb"
   location            = azurerm_resource_group.main.location
@@ -234,8 +242,9 @@ resource "azurerm_lb_rule" "http" {
 }
 
 
+# Bastion zapewnia awaryjny dostęp administracyjny bez IP na VM.
 resource "azurerm_public_ip" "bastion" {
-  count               = var.enable_bastion ? 1 : 0
+  count = var.enable_bastion ? 1 : 0
 
   name                = "pip-bastion"
   location            = azurerm_resource_group.main.location
@@ -246,7 +255,7 @@ resource "azurerm_public_ip" "bastion" {
 }
 
 resource "azurerm_bastion_host" "main" {
-  count = local.full ? 1 : 0
+  count               = local.full ? 1 : 0
   name                = "bastion-helpdesk"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -258,8 +267,9 @@ resource "azurerm_bastion_host" "main" {
   }
 }
 
+# Brama User-to-Site pozwala zarządzać VM z lokalnego komputera.
 resource "azurerm_public_ip" "vpn" {
-  count               = var.enable_vpn ? 1 : 0
+  count = var.enable_vpn ? 1 : 0
 
   name                = "pip-vpn-gateway"
   location            = azurerm_resource_group.main.location
@@ -281,20 +291,34 @@ resource "azurerm_virtual_network_gateway" "vpn" {
   type     = "Vpn"
   vpn_type = "RouteBased"
 
+  active_active = false
+  bgp_enabled   = false
+
   sku = "VpnGw1AZ"
 
   ip_configuration {
-    name                          = "vpnGatewayConfig"
+    name                          = "vpngatewayconfig"
     public_ip_address_id          = azurerm_public_ip.vpn[0].id
     private_ip_address_allocation = "Dynamic"
     subnet_id                     = azurerm_subnet.gateway.id
   }
 
-lifecycle {
-  create_before_destroy = true
-}
+  vpn_client_configuration {
+    address_space = [
+      "172.20.200.0/24"
+    ]
+
+
+    vpn_client_protocols = ["OpenVPN"]
+
+    root_certificate {
+      name             = "vpn-root"
+      public_cert_data = filebase64("AzureVPNRootCert.cer")
+    }
+  }
 }
 
+# Storage przechowuje załączniki, dokumentację i kopie zapasowe.
 resource "azurerm_storage_account" "helpdesk" {
   name                = "helpdesk${random_string.storage.result}"
   resource_group_name = azurerm_resource_group.main.name
@@ -328,58 +352,8 @@ resource "azurerm_storage_container" "backups" {
   container_access_type = "private"
 }
 
-resource "azurerm_network_interface" "ansible" {
-  name                = "nic-ansible-mgmt"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
 
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.management.id
-    private_ip_address_allocation = "Dynamic"
-  }
-}
-
-resource "azurerm_linux_virtual_machine" "ansible" {
-  name                = "ansible-mgmt"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-
-  size = "Standard_B1s"
-
-  admin_username = var.admin_username
-
-  network_interface_ids = [
-    azurerm_network_interface.ansible.id
-  ]
-
-  admin_ssh_key {
-    username   = var.admin_username
-    public_key = file(var.ssh_public_key_path)
-  }
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "ubuntu-24_04-lts"
-    sku       = "server"
-    version   = "latest"
-  }
-
-  identity {
-    type = "SystemAssigned"
-  }
-}
-
-resource "azurerm_network_interface_security_group_association" "ansible" {
-  network_interface_id      = azurerm_network_interface.ansible.id
-  network_security_group_id = azurerm_network_security_group.app.id
-}
-
+# Monitoring zbiera metryki i logi z serwerów Linux.
 resource "azurerm_log_analytics_workspace" "main" {
   name                = "law-helpdesk-prod"
   location            = azurerm_resource_group.main.location

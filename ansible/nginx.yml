@@ -1,21 +1,71 @@
 ---
-- name: Configure HelpDesk Servers
+- name: Skonfiguruj serwery HelpDesk
   hosts: helpdesk
   become: true
 
   tasks:
+    # Cache pakietów jest odświeżany najwyżej raz na godzinę.
+    - name: Odśwież listę pakietów
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
 
-    - name: Update apt cache
-      apt:
-        update_cache: yes
-
-    - name: Ensure nginx is installed
-      apt:
+    # Nginx obsługuje ruch przekazywany przez Load Balancer.
+    - name: Zainstaluj Nginx
+      ansible.builtin.apt:
         name: nginx
         state: present
 
-    - name: Ensure nginx is running
-      service:
+    # Prosta konfiguracja wystarcza dla strony testowej projektu.
+    - name: Ustaw konfigurację strony HelpDesk
+      ansible.builtin.copy:
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+
+              root /var/www/html;
+              index index.html;
+
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+          }
+      notify: Przeładuj Nginx
+
+    # Nazwa hosta pokazuje, który backend odpowiedział.
+    - name: Wdróż stronę testową HelpDesk
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          <!doctype html>
+          <html lang="pl">
+          <head>
+            <meta charset="utf-8">
+            <title>HelpDesk</title>
+          </head>
+          <body>
+            <h1>HelpDesk działa</h1>
+            <p>Backend: {{ inventory_hostname }}</p>
+          </body>
+          </html>
+
+    - name: Uruchom Nginx przy starcie systemu
+      ansible.builtin.service:
         name: nginx
         state: started
-        enabled: yes
+        enabled: true
+
+  handlers:
+    # Handler działa tylko wtedy, gdy konfiguracja się zmieni.
+    - name: Przeładuj Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded

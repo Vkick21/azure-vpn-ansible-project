@@ -1,4 +1,5 @@
 terraform {
+  # Wersje są ograniczone, żeby aktualizacja providera nie zaskoczyła projektu.
   required_version = ">= 1.5.0"
 
   required_providers {
@@ -14,6 +15,7 @@ terraform {
   }
 }
 
+# Domyślna konfiguracja połączenia z Azure.
 provider "azurerm" {
   features {}
 }
