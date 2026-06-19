@@ -3,9 +3,8 @@
 *.tfstate.backup
 *.tfvars
 .terraform.lock.hcl
-
 state-before.txt
 state-full.txt
 outputs-before.txt
-
+errored.tfstate
 backend.tf.disabled

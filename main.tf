@@ -281,7 +281,7 @@ resource "azurerm_virtual_network_gateway" "vpn" {
   type     = "Vpn"
   vpn_type = "RouteBased"
 
-  sku = local.full ? "VpnGw1AZ" : "VpnGw1"
+  sku = "VpnGw1AZ"
 
   ip_configuration {
     name                          = "vpnGatewayConfig"
@@ -289,6 +289,10 @@ resource "azurerm_virtual_network_gateway" "vpn" {
     private_ip_address_allocation = "Dynamic"
     subnet_id                     = azurerm_subnet.gateway.id
   }
+
+lifecycle {
+  create_before_destroy = true
+}
 }
 
 resource "azurerm_storage_account" "helpdesk" {
