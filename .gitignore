@@ -13,3 +13,4 @@ backend.tf.disabled
 __pycache__/
 *.pyc
 test.sqlite3
+app/media/

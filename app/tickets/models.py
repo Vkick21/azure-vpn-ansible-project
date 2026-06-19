@@ -22,6 +22,7 @@ class Ticket(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField("Tytuł", max_length=200)
     description = models.TextField("Opis")
+    attachment = models.FileField("Załącznik", upload_to="tickets/%Y/%m/", blank=True)
     requester_email = models.EmailField("E-mail zgłaszającego")
     priority = models.CharField(
         "Priorytet",

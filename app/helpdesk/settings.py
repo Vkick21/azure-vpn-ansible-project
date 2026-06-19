@@ -111,4 +111,28 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Produkcja zapisuje załączniki prywatnie w istniejącym Azure Storage.
+storage_account_name = os.getenv("AZURE_STORAGE_ACCOUNT")
+if storage_account_name:
+    from azure.identity import ManagedIdentityCredential
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.azure_storage.AzureStorage",
+            "OPTIONS": {
+                "account_name": storage_account_name,
+                "azure_container": "attachments",
+                "token_credential": ManagedIdentityCredential(),
+                "expiration_secs": 900,
+                "overwrite_files": False,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    MEDIA_ROOT = BASE_DIR / "media"
+    MEDIA_URL = "/media/"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

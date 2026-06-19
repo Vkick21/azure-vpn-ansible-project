@@ -93,6 +93,7 @@
           Environment=DATABASE_HOST={{ database_host }}
           Environment=DATABASE_NAME=helpdesk
           Environment=DATABASE_USER=helpdesk_app
+          Environment=AZURE_STORAGE_ACCOUNT=examplestorageaccount
           Environment=DJANGO_ALLOWED_HOSTS={{ load_balancer_ip }},10.10.1.4,10.10.1.5,localhost,127.0.0.1
           ExecStart={{ app_venv }}/bin/gunicorn --workers 2 --threads 2 --bind 127.0.0.1:8000 helpdesk.wsgi:application
           Restart=always

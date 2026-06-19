@@ -1,0 +1,127 @@
+---
+- name: Skonfiguruj automatyczny backup PostgreSQL
+  hosts: database
+  become: true
+
+  vars:
+    backup_root: /opt/helpdesk-backup
+    storage_account_name: examplestorageaccount
+
+  tasks:
+    # Osobne środowisko Python nie miesza zależności z systemem.
+    - name: Zainstaluj narzędzia backupu
+      ansible.builtin.apt:
+        name:
+          - python3-venv
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Przygotuj katalog backupu
+      ansible.builtin.file:
+        path: "{{ backup_root }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Utwórz środowisko Python backupu
+      ansible.builtin.command:
+        cmd: "python3 -m venv {{ backup_root }}/venv"
+        creates: "{{ backup_root }}/venv/bin/python"
+
+    - name: Zainstaluj biblioteki Azure
+      ansible.builtin.pip:
+        name:
+          - azure-identity==1.25.3
+          - azure-storage-blob==12.30.0
+        virtualenv: "{{ backup_root }}/venv"
+
+    # Skrypt usuwa lokalny plik po wysłaniu i trzyma 14 dni kopii.
+    - name: Dodaj skrypt backupu
+      ansible.builtin.copy:
+        dest: "{{ backup_root }}/backup.py"
+        owner: root
+        group: root
+        mode: "0750"
+        content: |
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+          import os
+          import subprocess
+
+          from azure.identity import ManagedIdentityCredential
+          from azure.storage.blob import BlobServiceClient
+
+          account = os.environ["AZURE_STORAGE_ACCOUNT"]
+          timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+          backup = Path(f"/tmp/helpdesk-{timestamp}.dump")
+          blob_name = f"postgresql/{backup.name}"
+
+          try:
+              subprocess.run(
+                  [
+                      "runuser", "-u", "postgres", "--",
+                      "pg_dump", "-Fc", "helpdesk", "-f", str(backup),
+                  ],
+                  check=True,
+              )
+
+              service = BlobServiceClient(
+                  account_url=f"https://{account}.blob.core.windows.net",
+                  credential=ManagedIdentityCredential(),
+              )
+              container = service.get_container_client("backups")
+
+              with backup.open("rb") as data:
+                  container.upload_blob(blob_name, data, overwrite=False)
+
+              cutoff = datetime.now(timezone.utc) - timedelta(days=14)
+              for blob in container.list_blobs(name_starts_with="postgresql/"):
+                  if blob.last_modified < cutoff:
+                      container.delete_blob(blob.name)
+          finally:
+              backup.unlink(missing_ok=True)
+
+    - name: Dodaj usługę backupu
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/helpdesk-backup.service
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Backup bazy HelpDesk do Azure Storage
+          After=network-online.target postgresql.service
+
+          [Service]
+          Type=oneshot
+          Environment=AZURE_STORAGE_ACCOUNT={{ storage_account_name }}
+          ExecStart={{ backup_root }}/venv/bin/python {{ backup_root }}/backup.py
+          PrivateTmp=false
+          NoNewPrivileges=true
+
+    - name: Dodaj codzienny harmonogram backupu
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/helpdesk-backup.timer
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Codzienny backup bazy HelpDesk
+
+          [Timer]
+          OnCalendar=*-*-* 02:30:00
+          Persistent=true
+          RandomizedDelaySec=10m
+
+          [Install]
+          WantedBy=timers.target
+
+    - name: Włącz harmonogram backupu
+      ansible.builtin.systemd:
+        name: helpdesk-backup.timer
+        state: started
+        enabled: true
+        daemon_reload: true

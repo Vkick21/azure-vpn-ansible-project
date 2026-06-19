@@ -35,6 +35,37 @@
         status_code: 200
       register: backend_health
       failed_when: backend_health.json.database != "available"
+    - name: Sprawdź plik załącznika w Azure Storage
+      ansible.builtin.command:
+        argv:
+          - /opt/helpdesk/venv/bin/python
+          - manage.py
+          - shell
+          - -c
+          - >-
+            from django.core.files.storage import default_storage;
+            from tickets.models import Ticket;
+            ticket = Ticket.objects.exclude(attachment="").latest("created_at");
+            print(default_storage.exists(ticket.attachment.name))
+        chdir: /opt/helpdesk/app
+      environment:
+        KEY_VAULT_NAME: kv-helpdesk-example
+        DATABASE_HOST: 10.10.5.4
+        DATABASE_NAME: helpdesk
+        DATABASE_USER: helpdesk_app
+        DJANGO_ALLOWED_HOSTS: localhost
+        AZURE_STORAGE_ACCOUNT: examplestorageaccount
+      register: attachment_exists
+      changed_when: false
+      run_once: true
+
+    - name: Potwierdź obecność załącznika
+      ansible.builtin.assert:
+        that:
+          - attachment_exists.stdout_lines | last == "True"
+        fail_msg: "Załącznik nie został znaleziony w Azure Storage."
+        success_msg: "Załącznik istnieje w prywatnym kontenerze Azure Storage."
+      run_once: true
 
 - name: Sprawdź dane zapisane w PostgreSQL
   hosts: database
@@ -62,3 +93,30 @@
           - ticket_count.stdout | trim | int >= 1
         fail_msg: "W bazie nie znaleziono testowego zgłoszenia."
         success_msg: "Zgłoszenia są poprawnie zapisane w PostgreSQL."
+    - name: Sprawdź aktywny timer backupu
+      ansible.builtin.command:
+        cmd: systemctl is-active helpdesk-backup.timer
+      changed_when: false
+
+    - name: Policz backupy w Azure Storage
+      ansible.builtin.command:
+        argv:
+          - /opt/helpdesk-backup/venv/bin/python
+          - -c
+          - >-
+            from azure.identity import ManagedIdentityCredential;
+            from azure.storage.blob import BlobServiceClient;
+            service = BlobServiceClient(
+              account_url="https://examplestorageaccount.blob.core.windows.net",
+              credential=ManagedIdentityCredential()
+            );
+            print(sum(1 for blob in service.get_container_client("backups").list_blobs(name_starts_with="postgresql/")))
+      register: backup_count
+      changed_when: false
+
+    - name: Potwierdź obecność backupu
+      ansible.builtin.assert:
+        that:
+          - backup_count.stdout | trim | int >= 1
+        fail_msg: "Nie znaleziono backupu PostgreSQL w Azure Storage."
+        success_msg: "Backup PostgreSQL istnieje w prywatnym kontenerze Azure Storage."

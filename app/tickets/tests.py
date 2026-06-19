@@ -1,3 +1,4 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
@@ -18,8 +19,10 @@ class TicketViewsTests(TestCase):
                 "title": "Problem z logowaniem",
                 "description": "Nie mogę zalogować się do systemu.",
                 "priority": Ticket.Priority.HIGH,
+                "attachment": SimpleUploadedFile("error.txt", b"test attachment"),
             },
         )
         ticket = Ticket.objects.get()
         self.assertRedirects(response, reverse("ticket-success", kwargs={"pk": ticket.pk}))
         self.assertEqual(ticket.status, Ticket.Status.NEW)
+        self.assertTrue(ticket.attachment.name.endswith("error.txt"))
