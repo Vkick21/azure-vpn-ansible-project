@@ -223,7 +223,9 @@ resource "azurerm_network_interface_backend_address_pool_association" "helpdesk0
 resource "azurerm_lb_probe" "http" {
   loadbalancer_id = azurerm_lb.helpdesk.id
   name            = "http-probe"
+  protocol        = "Http"
   port            = 80
+  request_path    = "/health/"
 }
 
 resource "azurerm_lb_rule" "http" {

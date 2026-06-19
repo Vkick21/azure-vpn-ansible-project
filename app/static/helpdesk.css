@@ -1,0 +1,76 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, system-ui, sans-serif;
+  background: #eef3f8;
+  color: #183047;
+}
+
+body {
+  margin: 0;
+}
+
+.container {
+  width: min(720px, calc(100% - 32px));
+  margin: 48px auto;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  margin: 18px 0 8px;
+}
+
+.lead {
+  color: #52677b;
+}
+
+.card {
+  margin-top: 28px;
+  padding: 28px;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 16px 40px rgb(30 64 100 / 12%);
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+input,
+textarea,
+select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #c8d4df;
+  border-radius: 8px;
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 18px;
+  background: #1769e0;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.success code {
+  display: block;
+  overflow-wrap: anywhere;
+  margin: 16px 0;
+  font-size: 1.05rem;
+}

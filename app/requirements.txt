@@ -1,0 +1,5 @@
+Django==5.2.15
+gunicorn==26.0.0
+psycopg[binary]==3.3.4
+azure-identity==1.25.3
+azure-keyvault-secrets==4.11.0

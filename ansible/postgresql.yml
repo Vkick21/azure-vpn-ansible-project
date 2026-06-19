@@ -1,0 +1,129 @@
+---
+- name: Skonfiguruj prywatny serwer PostgreSQL
+  hosts: database
+  become: true
+
+  vars:
+    database_name: helpdesk
+    database_user: helpdesk_app
+    database_password: "{{ lookup('ansible.builtin.env', 'HELPDESK_DB_PASSWORD') }}"
+
+  pre_tasks:
+    # Playbook zatrzyma się, jeśli sekret nie został pobrany z Key Vault.
+    - name: Sprawdź dostępność hasła bazy
+      ansible.builtin.assert:
+        that:
+          - database_password | length >= 24
+        fail_msg: "Brakuje hasła bazy w zmiennej HELPDESK_DB_PASSWORD."
+      no_log: true
+
+  tasks:
+    # Mały swap chroni oszczędną VM przed brakiem pamięci.
+    - name: Utwórz plik swap
+      ansible.builtin.command:
+        cmd: fallocate -l 1G /swapfile
+        creates: /swapfile
+      register: swap_file
+
+    - name: Zabezpiecz plik swap
+      ansible.builtin.file:
+        path: /swapfile
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Przygotuj plik swap
+      ansible.builtin.command:
+        cmd: mkswap /swapfile
+      when: swap_file.changed
+
+    - name: Włącz swap
+      ansible.builtin.command:
+        cmd: swapon /swapfile
+      when: swap_file.changed
+
+    - name: Zachowaj swap po restarcie
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        line: "/swapfile none swap sw 0 0"
+        state: present
+
+    # Instalujemy tylko pakiety potrzebne do działania bazy.
+    - name: Zainstaluj PostgreSQL
+      ansible.builtin.apt:
+        name:
+          - postgresql
+          - postgresql-contrib
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Odczytaj wersję klastra PostgreSQL
+      ansible.builtin.shell:
+        cmd: "pg_lsclusters --no-header | awk 'NR == 1 {print $1}'"
+      register: postgres_version
+      changed_when: false
+
+    # Ustawienia są celowo małe dla VM z 1 GB RAM.
+    - name: Ogranicz użycie pamięci PostgreSQL
+      ansible.builtin.lineinfile:
+        path: "/etc/postgresql/{{ postgres_version.stdout }}/main/postgresql.conf"
+        regexp: '^#?{{ item.key }}\s*='
+        line: "{{ item.key }} = {{ item.value }}"
+      loop:
+        - { key: "listen_addresses", value: "'10.10.5.4,localhost'" }
+        - { key: "max_connections", value: "30" }
+        - { key: "shared_buffers", value: "128MB" }
+        - { key: "effective_cache_size", value: "384MB" }
+        - { key: "maintenance_work_mem", value: "64MB" }
+        - { key: "work_mem", value: "4MB" }
+      notify: Uruchom ponownie PostgreSQL
+
+    # Tylko serwery aplikacji mogą logować się do bazy.
+    - name: Zezwól aplikacji na połączenie z PostgreSQL
+      ansible.builtin.lineinfile:
+        path: "/etc/postgresql/{{ postgres_version.stdout }}/main/pg_hba.conf"
+        line: "host {{ database_name }} {{ database_user }} 10.10.1.0/24 scram-sha-256"
+        state: present
+      notify: Uruchom ponownie PostgreSQL
+
+    - name: Zastosuj konfigurację PostgreSQL
+      ansible.builtin.meta: flush_handlers
+
+    # Polecenia SQL wykonują się tylko, gdy brakuje roli lub bazy.
+    - name: Utwórz użytkownika aplikacji
+      ansible.builtin.shell:
+        cmd: |
+          if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='{{ database_user }}'" | grep -q 1; then
+            echo "EXISTS"
+          else
+            sudo -u postgres psql -v ON_ERROR_STOP=1 -c "CREATE ROLE {{ database_user }} LOGIN PASSWORD '{{ database_password }}';"
+            echo "CREATED"
+          fi
+      register: database_role
+      changed_when: "'CREATED' in database_role.stdout"
+      no_log: true
+
+    - name: Utwórz bazę HelpDesk
+      ansible.builtin.shell:
+        cmd: |
+          if sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='{{ database_name }}'" | grep -q 1; then
+            echo "EXISTS"
+          else
+            sudo -u postgres createdb --owner="{{ database_user }}" "{{ database_name }}"
+            echo "CREATED"
+          fi
+      register: helpdesk_database
+      changed_when: "'CREATED' in helpdesk_database.stdout"
+
+    - name: Uruchom PostgreSQL przy starcie systemu
+      ansible.builtin.service:
+        name: postgresql
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Uruchom ponownie PostgreSQL
+      ansible.builtin.service:
+        name: postgresql
+        state: restarted

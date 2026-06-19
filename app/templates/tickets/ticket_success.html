@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Zgłoszenie przyjęte | HelpDesk{% endblock %}
+{% block heading %}Zgłoszenie zostało przyjęte{% endblock %}
+
+{% block content %}
+<section class="card success">
+  <p>Zapisz identyfikator zgłoszenia:</p>
+  <code>{{ object.id }}</code>
+  <p><strong>{{ object.title }}</strong></p>
+  <a href="/">Dodaj kolejne zgłoszenie</a>
+</section>
+{% endblock %}

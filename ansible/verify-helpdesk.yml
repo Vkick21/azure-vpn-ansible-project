@@ -1,0 +1,64 @@
+---
+- name: Sprawdź publiczny dostęp do HelpDesk
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Sprawdź health probe przez Load Balancer
+      ansible.builtin.uri:
+        url: http://203.0.113.10/health/
+        return_content: true
+        status_code: 200
+      register: public_health
+      failed_when: public_health.json.database != "available"
+
+    - name: Potwierdź blokadę publicznego panelu administratora
+      ansible.builtin.uri:
+        url: http://203.0.113.10/admin/
+        status_code: 403
+
+- name: Sprawdź oba backendy aplikacji
+  hosts: helpdesk
+  become: true
+
+  tasks:
+    - name: Sprawdź usługę HelpDesk
+      ansible.builtin.command:
+        cmd: systemctl is-active helpdesk
+      changed_when: false
+
+    - name: Sprawdź lokalne połączenie z bazą
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8000/health/
+        return_content: true
+        status_code: 200
+      register: backend_health
+      failed_when: backend_health.json.database != "available"
+
+- name: Sprawdź dane zapisane w PostgreSQL
+  hosts: database
+  become: true
+
+  tasks:
+    - name: Policz zgłoszenia HelpDesk
+      ansible.builtin.command:
+        argv:
+          - runuser
+          - -u
+          - postgres
+          - --
+          - psql
+          - -d
+          - helpdesk
+          - -tAc
+          - "SELECT count(*) FROM tickets_ticket;"
+      register: ticket_count
+      changed_when: false
+
+    - name: Potwierdź zapis co najmniej jednego zgłoszenia
+      ansible.builtin.assert:
+        that:
+          - ticket_count.stdout | trim | int >= 1
+        fail_msg: "W bazie nie znaleziono testowego zgłoszenia."
+        success_msg: "Zgłoszenia są poprawnie zapisane w PostgreSQL."

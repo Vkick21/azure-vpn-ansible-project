@@ -11,39 +11,46 @@ Set-StrictMode -Version Latest
 # Skrypt działa zawsze względem katalogu projektu.
 Set-Location $PSScriptRoot
 
-# Tylko te maszyny tworzą warstwę aplikacyjną.
-$VmNames = @("helpdesk01", "helpdesk02")
+# Baza uruchamia się przed aplikacją i zatrzymuje jako ostatnia.
+$AppVmNames = @("helpdesk01", "helpdesk02")
+$DatabaseVmName = "helpdesk-db01"
 
 switch ($Action)
 {
     "start" {
-        # Uruchamiamy VM bez zmieniania pozostałej infrastruktury.
-        Write-Host "Starting compute layer..."
-        foreach ($VmName in $VmNames) {
+        Write-Host "Starting database..."
+        az vm start --resource-group $ResourceGroup --name $DatabaseVmName
+
+        Write-Host "Starting application servers..."
+        foreach ($VmName in $AppVmNames) {
             az vm start --resource-group $ResourceGroup --name $VmName
         }
     }
 
     "stop" {
-        # Deallocate zatrzymuje naliczanie kosztu mocy obliczeniowej.
-        Write-Host "Stopping compute layer only..."
-        foreach ($VmName in $VmNames) {
+        # Najpierw zatrzymujemy aplikację, żeby nie zerwała połączeń do bazy.
+        Write-Host "Stopping application servers..."
+        foreach ($VmName in $AppVmNames) {
             az vm deallocate --resource-group $ResourceGroup --name $VmName
         }
 
+        Write-Host "Stopping database..."
+        az vm deallocate --resource-group $ResourceGroup --name $DatabaseVmName
         Write-Host "Compute stopped. Network + VPN preserved."
     }
 
     "restart" {
-        # Restart przydaje się po zmianach systemowych na VM.
-        Write-Host "Restarting compute layer..."
-        foreach ($VmName in $VmNames) {
+        # Kolejność restartu zachowuje dostępność bazy dla aplikacji.
+        Write-Host "Restarting database..."
+        az vm restart --resource-group $ResourceGroup --name $DatabaseVmName
+
+        Write-Host "Restarting application servers..."
+        foreach ($VmName in $AppVmNames) {
             az vm restart --resource-group $ResourceGroup --name $VmName
         }
     }
 
     "status" {
-        # Pokazujemy osobno VM i bramę VPN.
         Write-Host "VM status:"
         az vm list --show-details --resource-group $ResourceGroup --output table
 

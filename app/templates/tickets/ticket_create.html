@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Nowe zgłoszenie | HelpDesk{% endblock %}
+{% block heading %}Opisz swój problem{% endblock %}
+
+{% block content %}
+<p class="lead">Wypełnij formularz. Zgłoszenie trafi do zespołu wsparcia.</p>
+<form method="post" class="card">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Wyślij zgłoszenie</button>
+</form>
+{% endblock %}

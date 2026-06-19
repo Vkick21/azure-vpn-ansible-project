@@ -1,0 +1,223 @@
+---
+- name: Upewnij się, że Nginx jest gotowy
+  ansible.builtin.import_playbook: nginx.yml
+
+- name: Wdróż aplikację Django HelpDesk
+  hosts: helpdesk
+  become: true
+
+  vars:
+    app_root: /opt/helpdesk
+    app_code: /opt/helpdesk/app
+    app_venv: /opt/helpdesk/venv
+    key_vault_name: kv-helpdesk-example
+    database_host: 10.10.5.4
+    load_balancer_ip: 203.0.113.10
+
+  tasks:
+    # Aplikacja działa na osobnym koncie bez dostępu do logowania.
+    - name: Utwórz użytkownika aplikacji
+      ansible.builtin.user:
+        name: helpdesk
+        system: true
+        shell: /usr/sbin/nologin
+        home: "{{ app_root }}"
+        create_home: true
+
+    - name: Zainstaluj narzędzia Python
+      ansible.builtin.apt:
+        name:
+          - python3-venv
+          - python3-pip
+          - rsync
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Przygotuj katalog aplikacji
+      ansible.builtin.file:
+        path: "{{ app_code }}"
+        state: directory
+        owner: helpdesk
+        group: helpdesk
+        mode: "0755"
+
+    # Rsync przesyła tylko faktycznie zmienione pliki.
+    - name: Synchronizuj kod HelpDesk
+      ansible.posix.synchronize:
+        src: ../app/
+        dest: "{{ app_code }}/"
+        delete: true
+        recursive: true
+        use_ssh_args: true
+        rsync_path: "sudo rsync"
+        rsync_opts:
+          - "--chown=helpdesk:helpdesk"
+          - "--no-perms"
+          - "--omit-dir-times"
+          - "--exclude=__pycache__/"
+          - "--exclude=*.pyc"
+          - "--exclude=staticfiles/"
+      notify: Uruchom ponownie HelpDesk
+
+    - name: Utwórz środowisko Python
+      ansible.builtin.command:
+        cmd: "python3 -m venv {{ app_venv }}"
+        creates: "{{ app_venv }}/bin/python"
+
+    - name: Zainstaluj zależności aplikacji
+      ansible.builtin.pip:
+        requirements: "{{ app_code }}/requirements.txt"
+        virtualenv: "{{ app_venv }}"
+      notify: Uruchom ponownie HelpDesk
+
+    # Systemd uruchamia aplikację automatycznie po restarcie VM.
+    - name: Dodaj usługę systemd
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/helpdesk.service
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Azure HelpDesk Django
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=simple
+          User=helpdesk
+          Group=helpdesk
+          WorkingDirectory={{ app_code }}
+          Environment=KEY_VAULT_NAME={{ key_vault_name }}
+          Environment=DATABASE_HOST={{ database_host }}
+          Environment=DATABASE_NAME=helpdesk
+          Environment=DATABASE_USER=helpdesk_app
+          Environment=DJANGO_ALLOWED_HOSTS={{ load_balancer_ip }},10.10.1.4,10.10.1.5,localhost,127.0.0.1
+          ExecStart={{ app_venv }}/bin/gunicorn --workers 2 --threads 2 --bind 127.0.0.1:8000 helpdesk.wsgi:application
+          Restart=always
+          RestartSec=5
+          PrivateTmp=true
+          NoNewPrivileges=true
+
+          [Install]
+          WantedBy=multi-user.target
+      notify:
+        - Przeładuj systemd
+        - Uruchom ponownie HelpDesk
+
+    # Migrację wspólnej bazy wykonuje tylko pierwszy serwer.
+    - name: Wykonaj migracje bazy
+      ansible.builtin.command:
+        cmd: "{{ app_venv }}/bin/python manage.py migrate --noinput"
+        chdir: "{{ app_code }}"
+      become_user: helpdesk
+      environment:
+        KEY_VAULT_NAME: "{{ key_vault_name }}"
+        DATABASE_HOST: "{{ database_host }}"
+        DATABASE_NAME: helpdesk
+        DATABASE_USER: helpdesk_app
+        DJANGO_ALLOWED_HOSTS: "localhost"
+      run_once: true
+      register: migrations
+      changed_when: "'Applying' in migrations.stdout"
+
+    - name: Utwórz pierwsze konto administratora
+      ansible.builtin.command:
+        cmd: "{{ app_venv }}/bin/python manage.py bootstrap_admin"
+        chdir: "{{ app_code }}"
+      become_user: helpdesk
+      environment:
+        KEY_VAULT_NAME: "{{ key_vault_name }}"
+        DATABASE_HOST: "{{ database_host }}"
+        DATABASE_NAME: helpdesk
+        DATABASE_USER: helpdesk_app
+        DJANGO_ALLOWED_HOSTS: "localhost"
+      run_once: true
+      register: admin_account
+      changed_when: "'CREATED' in admin_account.stdout"
+      no_log: true
+
+    - name: Zbierz pliki statyczne
+      ansible.builtin.command:
+        cmd: "{{ app_venv }}/bin/python manage.py collectstatic --noinput"
+        chdir: "{{ app_code }}"
+      become_user: helpdesk
+      environment:
+        KEY_VAULT_NAME: "{{ key_vault_name }}"
+        DATABASE_HOST: "{{ database_host }}"
+        DATABASE_NAME: helpdesk
+        DATABASE_USER: helpdesk_app
+        DJANGO_ALLOWED_HOSTS: "localhost"
+      register: static_files
+      changed_when: "'0 static files copied' not in static_files.stdout"
+
+    # Panel administratora jest dostępny tylko od strony VPN lub Bastiona.
+    - name: Skonfiguruj Nginx jako reverse proxy
+      ansible.builtin.copy:
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+
+              location /static/ {
+                  alias {{ app_code }}/staticfiles/;
+              }
+
+              location /admin/ {
+                  allow 172.20.200.0/24;
+                  allow 10.10.4.0/26;
+                  deny all;
+
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              }
+
+              location / {
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              }
+          }
+      notify: Przeładuj Nginx
+
+    - name: Uruchom usługę HelpDesk
+      ansible.builtin.systemd:
+        name: helpdesk
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: Zastosuj zmiany usług
+      ansible.builtin.meta: flush_handlers
+
+    - name: Sprawdź lokalny endpoint zdrowia
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8000/health/
+        status_code: 200
+      register: health_check
+      retries: 6
+      delay: 5
+      until: health_check.status == 200
+
+  handlers:
+    - name: Przeładuj systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Uruchom ponownie HelpDesk
+      ansible.builtin.systemd:
+        name: helpdesk
+        state: restarted
+
+    - name: Przeładuj Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded

@@ -9,3 +9,7 @@ state-full.txt
 outputs-before.txt
 errored.tfstate
 backend.tf.disabled
+.venv/
+__pycache__/
+*.pyc
+test.sqlite3
