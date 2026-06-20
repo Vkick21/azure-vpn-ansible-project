@@ -112,6 +112,7 @@ Write-DemoStep `
     -Explanation "Operator musi nalezec do grupy Entra ID i zalogowac sie przez prywatny panel po VPN." `
     -Commands @(
         ".\entra-operators.ps1 -Action List",
+        '.\onboard-operator.ps1 -UserPrincipalName "user@example.com"',
         "Otworz $OperatorUrl"
     ) `
     -Expected "Po logowaniu widoczny jest panel i czytelna nazwa operatora."
