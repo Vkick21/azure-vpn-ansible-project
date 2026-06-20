@@ -5,6 +5,7 @@ from django.urls import reverse
 from unittest.mock import patch
 
 from .oidc import EntraOperatorBackend
+from .forms import TicketOperatorForm
 
 from .models import Comment, Ticket
 
@@ -132,6 +133,17 @@ class OperatorPanelTests(TestCase):
         self.assertEqual(self.ticket.status, Ticket.Status.IN_PROGRESS)
         self.assertEqual(self.ticket.priority, Ticket.Priority.URGENT)
         self.assertEqual(self.ticket.assigned_to, self.operator)
+
+    def test_operator_choice_uses_full_name_instead_of_entra_identifier(self):
+        self.operator.first_name = "Jan"
+        self.operator.last_name = "Michalak"
+        self.operator.username = "entra-technical-identifier"
+        self.operator.save(update_fields=["first_name", "last_name", "username"])
+
+        form = TicketOperatorForm()
+        labels = [label for value, label in form.fields["assigned_to"].choices if value]
+        self.assertIn("Jan Michalak", labels)
+        self.assertNotIn("entra-technical-identifier", labels)
 
     def test_operator_comment_records_author(self):
         self.client.force_login(self.operator)
