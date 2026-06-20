@@ -96,10 +96,11 @@ if ($LASTEXITCODE -ne 0) {
     az login --tenant $env:ENTRA_TENANT_ID | Out-Null
 }
 
-$resourceGroup = terraform -chdir=$ProjectRoot output -raw resource_group_name
+$resourceGroup = terraform "-chdir=$ProjectRoot" output -raw resource_group_name
 if ($LASTEXITCODE -ne 0 -or -not $resourceGroup) {
     throw "Nie mozna odczytac grupy zasobow z Terraform."
 }
+$resourceGroup = $resourceGroup.Trim()
 
 $gatewayName = az network vnet-gateway list `
     --resource-group $resourceGroup `
@@ -108,6 +109,7 @@ $gatewayName = az network vnet-gateway list `
 if ($LASTEXITCODE -ne 0 -or -not $gatewayName) {
     throw "Nie znaleziono VPN Gateway."
 }
+$gatewayName = $gatewayName.Trim()
 
 $profileUrl = az network vnet-gateway vpn-client generate `
     --resource-group $resourceGroup `
@@ -117,6 +119,7 @@ $profileUrl = az network vnet-gateway vpn-client generate `
 if ($LASTEXITCODE -ne 0 -or -not $profileUrl) {
     throw "Nie udalo sie wygenerowac profilu VPN."
 }
+$profileUrl = $profileUrl.Trim()
 
 $profileZip = Join-Path $packageDirectory "vpn-client-profile.zip"
 $profileDirectory = Join-Path $packageDirectory "vpn-client-profile"
