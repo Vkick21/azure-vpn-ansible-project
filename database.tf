@@ -85,17 +85,6 @@ resource "azurerm_network_security_group" "database" {
     destination_address_prefix = "AzureCloud"
   }
   security_rule {
-    name                       = "AllowAzureDNSOutbound"
-    priority                   = 2020
-    direction                  = "Outbound"
-    access                     = "Allow"
-    protocol                   = "*"
-    source_port_range          = "*"
-    destination_port_range     = "53"
-    source_address_prefix      = "*"
-    destination_address_prefix = "AzurePlatformDNS"
-  }
-  security_rule {
     name                       = "DenyOtherVnetOutbound"
     priority                   = 4090
     direction                  = "Outbound"
