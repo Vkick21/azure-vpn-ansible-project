@@ -1,5 +1,7 @@
 # VKICKHAMSTER Helpdesk na Azure
 
+[![CI](https://github.com/Vkick21/azure-vpn-ansible-project/actions/workflows/ci.yml/badge.svg)](https://github.com/Vkick21/azure-vpn-ansible-project/actions/workflows/ci.yml)
+
 Projekt przedstawia kompletny system Helpdesk uruchomiony w Microsoft Azure. Infrastruktura jest zarządzana przez Terraform, konfiguracja serwerów przez Ansible, a aplikacja została napisana w Django i korzysta z PostgreSQL.
 
 ## Najważniejsze funkcje

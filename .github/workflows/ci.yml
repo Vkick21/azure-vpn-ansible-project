@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_VAR_ssh_public_key_path: ${{ github.workspace }}/.ci/id_ed25519.pub
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.6
+          terraform_wrapper: false
+
+      - name: Create validation SSH key fixture
+        shell: bash
+        run: |
+          mkdir -p .ci
+          echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGludGVudGlvbmFsbHktbm90LWEtcmVhbC1rZXk ci-validation" > .ci/id_ed25519.pub
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive
+
+      - name: Initialize Terraform without backend
+        run: terraform init -backend=false
+
+      - name: Validate Terraform
+        run: terraform validate
+
+  ansible:
+    name: Ansible
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "ansible-core==2.20.1"
+          ansible-galaxy collection install ansible.posix
+
+      - name: Check playbook syntax
+        working-directory: ansible
+        run: |
+          for playbook in \
+            backup-postgresql.yml \
+            deploy-code-only.yml \
+            deploy-helpdesk.yml \
+            https.yml \
+            nginx.yml \
+            postgresql.yml \
+            provision-client.yml \
+            verify-helpdesk.yml
+          do
+            ansible-playbook -i inventory.ini "$playbook" --syntax-check
+          done
+
+  powershell:
+    name: PowerShell
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Check PowerShell syntax
+        shell: pwsh
+        run: |
+          $AllErrors = @()
+          Get-ChildItem -Path . -Filter *.ps1 -File | ForEach-Object {
+              $Tokens = $null
+              $Errors = $null
+              [void][System.Management.Automation.Language.Parser]::ParseFile(
+                  $_.FullName,
+                  [ref]$Tokens,
+                  [ref]$Errors
+              )
+              $AllErrors += $Errors
+          }
+          if ($AllErrors.Count -gt 0) {
+              $AllErrors | Format-Table -AutoSize
+              throw "PowerShell syntax check failed."
+          }
+
+  django:
+    name: Django
+    runs-on: ubuntu-latest
+    env:
+      USE_SQLITE_FOR_TESTS: "true"
+      DJANGO_SECRET_KEY: test-only-key
+      DJANGO_ALLOWED_HOSTS: testserver,localhost
+      DJANGO_MEDIA_ROOT: ${{ runner.temp }}/vkickhamster-test-media
+      ENTRA_TENANT_ID: test-tenant
+      ENTRA_CLIENT_ID: test-client
+      ENTRA_CLIENT_SECRET: test-secret
+      ENTRA_OPERATOR_GROUP_ID: allowed-group
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: app/requirements.txt
+
+      - name: Install application dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r app/requirements.txt
+
+      - name: Run Django tests
+        working-directory: app
+        run: python manage.py test tickets
