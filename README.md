@@ -79,6 +79,18 @@ Prywatnego klucza nie należy zapisywać w repozytorium.
 
 ## Podstawowe polecenia
 
+Interaktywny przewodnik do prezentacji projektu:
+
+```powershell
+.\presentation-demo.ps1
+```
+
+Opcjonalne automatyczne otwieranie formularza i panelu:
+
+```powershell
+.\presentation-demo.ps1 -OpenPages
+```
+
 Walidacja i plan Terraform:
 
 ```powershell
