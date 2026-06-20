@@ -17,6 +17,26 @@ if (-not $Domain -or -not $PrivateIp) {
 
 $HostsPath = Join-Path $env:SystemRoot "System32\drivers\etc\hosts"
 
+function Set-HostsFileWithRetry {
+    param(
+        [string[]]$Lines,
+        [int]$Attempts = 10
+    )
+
+    for ($Attempt = 1; $Attempt -le $Attempts; $Attempt++) {
+        try {
+            Set-Content -LiteralPath $HostsPath -Value $Lines -Encoding ascii
+            return
+        }
+        catch [System.IO.IOException] {
+            if ($Attempt -eq $Attempts) {
+                throw
+            }
+            Start-Sleep -Milliseconds 500
+        }
+    }
+}
+
 $Principal = New-Object Security.Principal.WindowsPrincipal(
     [Security.Principal.WindowsIdentity]::GetCurrent()
 )
@@ -44,11 +64,14 @@ $RemainingLines = $CurrentLines | Where-Object {
 
 if ($Action -eq "Add") {
     $RemainingLines += $PrivateIp + [char]9 + $Domain + " # VKICKHAMSTER operator przez VPN"
+}
+
+Set-HostsFileWithRetry -Lines $RemainingLines
+Clear-DnsClientCache
+
+if ($Action -eq "Add") {
     Write-Host "Dodano prywatny dostep operatora przez VPN."
 }
 else {
     Write-Host "Usunieto prywatne mapowanie. Domena wroci do publicznego adresu."
 }
-
-Set-Content -LiteralPath $HostsPath -Value $RemainingLines -Encoding ascii
-Clear-DnsClientCache
