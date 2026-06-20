@@ -56,6 +56,18 @@ if ($Action -eq "Status") {
     exit
 }
 
+if ($Action -eq "Add") {
+    $PrivateEndpointAvailable = Test-NetConnection `
+        -ComputerName $PrivateIp `
+        -Port 443 `
+        -InformationLevel Quiet `
+        -WarningAction SilentlyContinue
+
+    if (-not $PrivateEndpointAvailable) {
+        throw "Brak polaczenia z prywatnym adresem $PrivateIp. Najpierw polacz profil vnet-helpdesk w Azure VPN Client."
+    }
+}
+
 # Usuwamy tylko wpis tej aplikacji i nie zmieniamy pozostalych linii hosts.
 $CurrentLines = Get-Content -LiteralPath $HostsPath
 $RemainingLines = $CurrentLines | Where-Object {
