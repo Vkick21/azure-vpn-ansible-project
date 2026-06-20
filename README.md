@@ -91,6 +91,14 @@ Opcjonalne automatyczne otwieranie formularza i panelu:
 .\presentation-demo.ps1 -OpenPages
 ```
 
+Demonstracja zarzadzania operatorami przez Ansible w WSL:
+
+```powershell
+.\operator-ansible-demo.ps1 -Action Explain
+.\operator-ansible-demo.ps1 -Action Login
+.\operator-ansible-demo.ps1 -Action List
+```
+
 Walidacja i plan Terraform:
 
 ```powershell

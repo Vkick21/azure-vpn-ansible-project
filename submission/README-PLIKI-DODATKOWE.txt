@@ -18,7 +18,8 @@ Najwazniejsze katalogi i pliki:
 
 4. Skrypty *.ps1
    Sterowanie srodowiskiem, dostep operatora przez VPN, raport kosztow
-   oraz interaktywny przewodnik presentation-demo.ps1.
+   interaktywny przewodnik presentation-demo.ps1 oraz demonstracje
+   zarzadzania operatorami przez operator-ansible-demo.ps1.
 
 5. docs/
    Opis projektu, bezpieczenstwa sieci, kosztow, Entra ID i wynikow testow.
