@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Zgłoszenia | VKICKHAMSTER Helpdesk{% endblock %}
+{% block container_class %}container-wide{% endblock %}
+{% block heading %}Zgłoszenia{% endblock %}
+
+{% block content %}
+<form method="get" class="card filters">
+  <div class="filter-grid">
+    <label>
+      Szukaj
+      <input type="search" name="q" value="{{ filters.q }}" placeholder="Tytuł, e-mail lub identyfikator">
+    </label>
+    <label>
+      Status
+      <select name="status">
+        <option value="">Wszystkie</option>
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Priorytet
+      <select name="priority">
+        <option value="">Wszystkie</option>
+        {% for value, label in priority_choices %}
+          <option value="{{ value }}" {% if filters.priority == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Operator
+      <select name="assigned_to">
+        <option value="">Wszyscy</option>
+        <option value="unassigned" {% if filters.assigned_to == "unassigned" %}selected{% endif %}>Nieprzypisane</option>
+        {% for operator in operators %}
+          <option value="{{ operator.pk }}" {% if filters.assigned_to == operator.pk|stringformat:"s" %}selected{% endif %}>{{ operator.get_full_name|default:operator.username }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <div class="form-actions">
+    <button type="submit">Filtruj</button>
+    <a href="{% url 'operator-ticket-list' %}" class="button-secondary">Wyczyść</a>
+  </div>
+</form>
+
+<section class="card table-card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Zgłoszenie</th>
+          <th>Status</th>
+          <th>Priorytet</th>
+          <th>Operator</th>
+          <th>Utworzono</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ticket in tickets %}
+          <tr>
+            <td>
+              <a class="ticket-link" href="{% url 'operator-ticket-detail' ticket.pk %}">{{ ticket.title }}</a>
+              <small>{{ ticket.requester_email }}</small>
+            </td>
+            <td><span class="pill status-{{ ticket.status }}">{{ ticket.get_status_display }}</span></td>
+            <td><span class="pill priority-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span></td>
+            <td>
+              {% if ticket.assigned_to %}
+                {{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.username }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>{{ ticket.created_at|date:"d.m.Y H:i" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="empty-state">Brak zgłoszeń spełniających kryteria.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if is_paginated %}
+    <nav class="pagination" aria-label="Strony">
+      {% if page_obj.has_previous %}
+        <a href="?{{ filters.urlencode }}&page={{ page_obj.previous_page_number }}">Poprzednia</a>
+      {% endif %}
+      <span>Strona {{ page_obj.number }} z {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a href="?{{ filters.urlencode }}&page={{ page_obj.next_page_number }}">Następna</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+</section>
+{% endblock %}

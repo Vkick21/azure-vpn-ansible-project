@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Logowanie operatora | VKICKHAMSTER Helpdesk{% endblock %}
+{% block heading %}Panel operatora{% endblock %}
+
+{% block content %}
+<p class="lead">Zaloguj się kontem pracownika, aby obsługiwać zgłoszenia.</p>
+<form method="post" class="card login-card">
+  {% csrf_token %}
+  {{ form.as_p }}
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  <button type="submit">Zaloguj</button>
+</form>
+{% endblock %}

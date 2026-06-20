@@ -122,6 +122,7 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Produkcja zapisuje załączniki prywatnie w istniejącym Azure Storage.
 storage_account_name = os.getenv("AZURE_STORAGE_ACCOUNT")
@@ -144,7 +145,10 @@ if storage_account_name:
         },
     }
 else:
-    MEDIA_ROOT = BASE_DIR / "media"
+    MEDIA_ROOT = Path(os.getenv("DJANGO_MEDIA_ROOT", BASE_DIR / "media"))
     MEDIA_URL = "/media/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+LOGIN_URL = "operator-login"
+LOGIN_REDIRECT_URL = "operator-ticket-list"

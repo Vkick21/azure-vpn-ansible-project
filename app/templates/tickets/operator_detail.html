@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{{ ticket.title }} | VKICKHAMSTER Helpdesk{% endblock %}
+{% block container_class %}container-wide{% endblock %}
+{% block heading %}{{ ticket.title }}{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'operator-ticket-list' %}">← Wróć do listy</a></p>
+
+<div class="detail-grid">
+  <section class="card ticket-content">
+    <dl class="ticket-meta">
+      <div><dt>Identyfikator</dt><dd><code>{{ ticket.pk }}</code></dd></div>
+      <div><dt>Zgłaszający</dt><dd><a href="mailto:{{ ticket.requester_email }}">{{ ticket.requester_email }}</a></dd></div>
+      <div><dt>Utworzono</dt><dd>{{ ticket.created_at|date:"d.m.Y H:i" }}</dd></div>
+      <div><dt>Aktualizacja</dt><dd>{{ ticket.updated_at|date:"d.m.Y H:i" }}</dd></div>
+    </dl>
+
+    <h2>Opis problemu</h2>
+    <div class="description">{{ ticket.description|linebreaks }}</div>
+
+    {% if ticket.attachment %}
+      <p><a href="{{ ticket.attachment.url }}" target="_blank" rel="noopener">Otwórz załącznik</a></p>
+    {% endif %}
+  </section>
+
+  <aside class="card">
+    <h2>Obsługa zgłoszenia</h2>
+    <form method="post" action="{% url 'operator-ticket-update' ticket.pk %}">
+      {% csrf_token %}
+      {{ ticket_form.as_p }}
+      <button type="submit">Zapisz zmiany</button>
+    </form>
+  </aside>
+</div>
+
+<section class="card">
+  <h2>Komentarze wewnętrzne</h2>
+  <div class="comments">
+    {% for comment in ticket.comments.all %}
+      <article class="comment">
+        <div class="comment-header">
+          <strong>
+            {% if comment.author %}
+              {{ comment.author.get_full_name|default:comment.author.username }}
+            {% else %}
+              Usunięty użytkownik
+            {% endif %}
+          </strong>
+          <time>{{ comment.created_at|date:"d.m.Y H:i" }}</time>
+        </div>
+        {{ comment.text|linebreaks }}
+      </article>
+    {% empty %}
+      <p class="empty-state">Nie dodano jeszcze komentarzy.</p>
+    {% endfor %}
+  </div>
+
+  <form method="post" action="{% url 'operator-comment-create' ticket.pk %}" class="comment-form">
+    {% csrf_token %}
+    {{ comment_form.as_p }}
+    <button type="submit">Dodaj komentarz</button>
+  </form>
+</section>
+{% endblock %}

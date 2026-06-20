@@ -167,6 +167,14 @@
       register: tls_certificate
 
     # Panel administratora jest dostępny tylko od strony VPN lub Bastiona.
+    # Nginx może przejść do zebranych plików, ale nie dostaje prawa listowania katalogu domowego.
+    - name: Daj Nginx dostęp do katalogu aplikacji
+      ansible.posix.acl:
+        path: /opt/helpdesk
+        entity: www-data
+        etype: user
+        permissions: x
+        state: present
     - name: Skonfiguruj Nginx jako reverse proxy
       ansible.builtin.copy:
         dest: /etc/nginx/sites-available/default

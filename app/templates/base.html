@@ -7,11 +7,32 @@
   <link rel="stylesheet" href="/static/helpdesk.css">
 </head>
 <body>
-  <main class="container">
-    <header>
-      <span class="badge">VKICKHAMSTER Helpdesk</span>
-      <h1>{% block heading %}Centrum wsparcia{% endblock %}</h1>
+  <main class="container {% block container_class %}{% endblock %}">
+    <header class="page-header">
+      <div>
+        <span class="badge">VKICKHAMSTER Helpdesk</span>
+        <h1>{% block heading %}Centrum wsparcia{% endblock %}</h1>
+      </div>
+      {% if user.is_authenticated and user.is_staff %}
+        <nav class="operator-nav">
+          <a href="{% url 'operator-ticket-list' %}">Zgłoszenia</a>
+          <span>{{ user.get_full_name|default:user.username }}</span>
+          <form method="post" action="{% url 'operator-logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="button-link">Wyloguj</button>
+          </form>
+        </nav>
+      {% endif %}
     </header>
+
+    {% if messages %}
+      <section class="messages" aria-live="polite">
+        {% for message in messages %}
+          <p class="message">{{ message }}</p>
+        {% endfor %}
+      </section>
+    {% endif %}
+
     {% block content %}{% endblock %}
   </main>
 </body>

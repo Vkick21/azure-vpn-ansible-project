@@ -1,0 +1,70 @@
+---
+- name: Wdróż kod aplikacji bez zmian w bazie
+  hosts: helpdesk
+  become: true
+
+  vars:
+    app_code: /opt/helpdesk/app
+    app_venv: /opt/helpdesk/venv
+    key_vault_name: kv-helpdesk-example
+    database_host: 10.10.5.4
+    helpdesk_domain: helpdesk-demo.example.com
+
+  tasks:
+    # Ta ścieżka służy do zmian interfejsu, które nie wymagają migracji.
+    - name: Synchronizuj kod aplikacji
+      ansible.posix.synchronize:
+        src: ../app/
+        dest: "{{ app_code }}/"
+        delete: true
+        recursive: true
+        use_ssh_args: true
+        rsync_path: "sudo rsync"
+        rsync_opts:
+          - "--chown=helpdesk:helpdesk"
+          - "--no-perms"
+          - "--omit-dir-times"
+          - "--exclude=__pycache__/"
+          - "--exclude=*.pyc"
+          - "--exclude=staticfiles/"
+          - "--exclude=media/"
+
+    - name: Zbierz pliki statyczne
+      ansible.builtin.command:
+        cmd: "{{ app_venv }}/bin/python manage.py collectstatic --noinput"
+        chdir: "{{ app_code }}"
+      become_user: helpdesk
+      environment:
+        KEY_VAULT_NAME: "{{ key_vault_name }}"
+        DATABASE_HOST: "{{ database_host }}"
+        DATABASE_NAME: helpdesk
+        DATABASE_USER: helpdesk_app
+        DJANGO_ALLOWED_HOSTS: "{{ helpdesk_domain }},localhost"
+        AZURE_STORAGE_ACCOUNT: examplestorageaccount
+      register: static_files
+      changed_when: "'0 static files copied' not in static_files.stdout"
+
+    # Nginx może przejść do zebranych plików, ale nie dostaje prawa listowania katalogu domowego.
+    - name: Daj Nginx dostęp do katalogu aplikacji
+      ansible.posix.acl:
+        path: /opt/helpdesk
+        entity: www-data
+        etype: user
+        permissions: x
+        state: present
+    - name: Uruchom ponownie aplikację
+      ansible.builtin.systemd:
+        name: helpdesk
+        state: restarted
+
+    - name: Sprawdź aplikację po wdrożeniu
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8000/health/
+        return_content: true
+        status_code: 200
+      register: health_check
+      retries: 6
+      delay: 5
+      until:
+        - health_check.status == 200
+        - health_check.json.database == "available"
