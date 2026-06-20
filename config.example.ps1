@@ -1,6 +1,8 @@
 # Copy this file to config.local.ps1 and enter values for your Azure environment.
 $env:TF_VAR_helpdesk_dns_label = "helpdesk-demo"
+$env:TF_VAR_operator_dns_label = "helpdesk-operator-demo"
 $env:HELPDESK_FQDN = "helpdesk-demo.example.com"
+$env:HELPDESK_OPERATOR_FQDN = "helpdesk-operator-demo.trafficmanager.net"
 $env:HELPDESK_PUBLIC_IP = "203.0.113.10"
 $env:HELPDESK_PRIVATE_IP = "10.10.1.10"
 $env:HELPDESK_DATABASE_IP = "10.10.5.4"

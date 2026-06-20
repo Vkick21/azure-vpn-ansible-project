@@ -11,7 +11,7 @@ Publiczny formularz Helpdesk:
 https://vkickhamster-helpdesk.westeurope.cloudapp.azure.com/
 
 Panel operatora - wymaga aktywnego VPN i konta w grupie Entra ID:
-https://vkickhamster-helpdesk.westeurope.cloudapp.azure.com/operator/
+https://vkickhamster-operator-110997.trafficmanager.net/operator/
 
 Kalkulator kosztow Microsoft Azure:
 https://azure.microsoft.com/pl-pl/pricing/calculator/

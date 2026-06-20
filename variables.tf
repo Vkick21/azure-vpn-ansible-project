@@ -52,3 +52,8 @@ variable "helpdesk_dns_label" {
   description = "DNS label for the public HelpDesk endpoint"
   type        = string
 }
+
+variable "operator_dns_label" {
+  description = "DNS label for the operator endpoint in Traffic Manager"
+  type        = string
+}

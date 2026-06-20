@@ -1,5 +1,6 @@
 # Values that identify a concrete Azure environment stay outside Git.
 helpdesk_domain: "{{ lookup('ansible.builtin.env', 'HELPDESK_FQDN') }}"
+operator_domain: "{{ lookup('ansible.builtin.env', 'HELPDESK_OPERATOR_FQDN') }}"
 helpdesk_public_ip: "{{ lookup('ansible.builtin.env', 'HELPDESK_PUBLIC_IP') }}"
 helpdesk_private_ip: "{{ lookup('ansible.builtin.env', 'HELPDESK_PRIVATE_IP') | default('10.10.1.10', true) }}"
 database_host: "{{ lookup('ansible.builtin.env', 'HELPDESK_DATABASE_IP') | default('10.10.5.4', true) }}"

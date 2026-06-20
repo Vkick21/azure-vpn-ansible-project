@@ -436,6 +436,32 @@ resource "azurerm_lb_rule" "internal_https" {
   probe_id = azurerm_lb_probe.operator_http.id
 }
 
+# Osobna nazwa operatora pozwala zostawic formularz na publicznym adresie.
+# Publicznie panel nadal zwraca 403, a host operatora kieruje te nazwe przez VPN.
+resource "azurerm_traffic_manager_profile" "operator" {
+  name                   = "tm-helpdesk-operator"
+  resource_group_name    = azurerm_resource_group.main.name
+  traffic_routing_method = "Priority"
+
+  dns_config {
+    relative_name = var.operator_dns_label
+    ttl           = 30
+  }
+
+  monitor_config {
+    protocol = "HTTPS"
+    port     = 443
+    path     = "/health/"
+  }
+}
+
+resource "azurerm_traffic_manager_azure_endpoint" "operator" {
+  name               = "public-helpdesk-endpoint"
+  profile_id         = azurerm_traffic_manager_profile.operator.id
+  target_resource_id = azurerm_public_ip.lb.id
+  priority           = 1
+}
+
 # Bastion zapewnia awaryjny dostep administracyjny bez IP na VM.
 resource "azurerm_public_ip" "bastion" {
   count = local.bastion_enabled ? 1 : 0

@@ -5,6 +5,7 @@
 
   vars:
     helpdesk_domain: "{{ lookup('ansible.builtin.env', 'HELPDESK_FQDN') }}"
+    operator_domain: "{{ lookup('ansible.builtin.env', 'HELPDESK_OPERATOR_FQDN') }}"
     storage_account_name: "{{ lookup('ansible.builtin.env', 'AZURE_STORAGE_ACCOUNT') }}"
     certificate_root: /etc/nginx/ssl/vkickhamster
     certificate_helper: /usr/local/sbin/helpdesk-certificate-storage.py
@@ -176,6 +177,11 @@
           - "{{ python_path }} {{ certificate_helper }} upload \"$RENEWED_LINEAGE/fullchain.pem\" \"$RENEWED_LINEAGE/privkey.pem\""
           - --domain
           - "{{ helpdesk_domain }}"
+          - --domain
+          - "{{ operator_domain }}"
+          - --cert-name
+          - "{{ helpdesk_domain }}"
+          - --expand
           - --agree-tos
           - --register-unsafely-without-email
           - --non-interactive
@@ -225,7 +231,7 @@
           server {
               listen 80 default_server;
               listen [::]:80 default_server;
-              server_name {{ helpdesk_domain }} _;
+              server_name {{ helpdesk_domain }} {{ operator_domain }} _;
 
               location = /health/ {
                   proxy_pass http://127.0.0.1:8000;
@@ -241,12 +247,12 @@
               # Logowanie operatora po HTTP wymaga VPN i przechodzi na HTTPS.
               location ^~ /operator/ {
                   include /etc/nginx/snippets/vkickhamster-vpn-only.conf;
-                  return 301 https://{{ helpdesk_domain }}$request_uri;
+                  return 301 https://{{ operator_domain }}$request_uri;
               }
 
               location ^~ /oidc/ {
                   include /etc/nginx/snippets/vkickhamster-vpn-only.conf;
-                  return 301 https://{{ helpdesk_domain }}$request_uri;
+                  return 301 https://{{ operator_domain }}$request_uri;
               }
               # Panel po prywatnym IP nadal dziala dla administratora po VPN.
               location /admin/ {
@@ -267,7 +273,7 @@
           server {
               listen 443 ssl default_server;
               listen [::]:443 ssl default_server;
-              server_name {{ helpdesk_domain }};
+              server_name {{ helpdesk_domain }} {{ operator_domain }};
 
               ssl_certificate {{ certificate_root }}/fullchain.pem;
               ssl_certificate_key {{ certificate_root }}/privkey.pem;

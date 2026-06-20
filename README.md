@@ -38,6 +38,9 @@ Usunięcie mapowania:
 .\operator-vpn-access.ps1 -Action Remove
 ```
 
+Formularz i panel maja osobne nazwy. Mapowanie VPN zmienia tylko adres
+operatora, dlatego publiczny formularz dziala rowniez po odlaczeniu VPN.
+
 ## Struktura repozytorium
 
 - `*.tf` — infrastruktura Azure;

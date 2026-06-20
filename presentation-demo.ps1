@@ -52,12 +52,12 @@ if (-not (Test-Path -LiteralPath $ConfigPath)) {
 
 . $ConfigPath
 
-if (-not $env:HELPDESK_FQDN) {
-    throw "Brakuje HELPDESK_FQDN w config.local.ps1."
+if (-not $env:HELPDESK_FQDN -or -not $env:HELPDESK_OPERATOR_FQDN) {
+    throw "Brakuje HELPDESK_FQDN lub HELPDESK_OPERATOR_FQDN w config.local.ps1."
 }
 
 $PublicUrl = "https://$($env:HELPDESK_FQDN)/"
-$OperatorUrl = "https://$($env:HELPDESK_FQDN)/operator/"
+$OperatorUrl = "https://$($env:HELPDESK_OPERATOR_FQDN)/operator/"
 
 Write-DemoHeader "VKICKHAMSTER Helpdesk - scenariusz prezentacji"
 Write-Host "Skrypt jest przewodnikiem i nie wykonuje terraform apply." -ForegroundColor Magenta
@@ -93,7 +93,7 @@ if ($OpenPages) {
 Write-DemoStep `
     -Number 3 `
     -Title "Blokada panelu bez VPN" `
-    -Explanation "Publiczny Load Balancer blokuje panel operatora kodem 403." `
+    -Explanation "Osobna publiczna nazwa operatora zwraca 403, a formularz pozostaje dostepny pod swoim adresem." `
     -Commands @(
         ".\operator-vpn-access.ps1 -Action Remove",
         "Otworz $OperatorUrl"
@@ -120,7 +120,7 @@ Write-DemoStep `
         ".\operator-vpn-access.ps1 -Action Add",
         ".\operator-vpn-access.ps1 -Action Status"
     ) `
-    -Expected "TcpTestSucceeded ma wartosc True, a domena wskazuje 10.10.1.10."
+    -Expected "TcpTestSucceeded ma wartosc True, a domena operatora wskazuje 10.10.1.10."
 
 Write-DemoStep `
     -Number 6 `

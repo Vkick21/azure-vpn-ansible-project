@@ -8,7 +8,7 @@ Panel operatora używa logowania Microsoft przez OpenID Connect.
 - Client ID: <ENTRA_CLIENT_ID>
 - Grupa operatorów: VKICKHAMSTER Helpdesk Operators
 - Group ID: <ENTRA_OPERATOR_GROUP_ID>
-- Callback: https://<HELPDESK_FQDN>/oidc/callback/
+- Callback: https://<HELPDESK_OPERATOR_FQDN>/oidc/callback/
 - Sekret w Key Vault: entra-client-secret
 
 Wartość sekretu nie znajduje się w repozytorium. Serwery pobierają ją z Key Vault przez Managed Identity.
@@ -29,6 +29,10 @@ Lokalne konto helpdesk-admin pozostaje kontem awaryjnym.
 Bieżący sekret wygasa 20 czerwca 2027 roku. Nową wartość należy utworzyć w rejestracji aplikacji i zapisać jako nową wersję sekretu entra-client-secret w Key Vault. Po rotacji aplikację trzeba zrestartować na obu backendach.
 
 ## Wymagany VPN dla panelu
+
+Formularz korzysta z publicznej nazwy `HELPDESK_FQDN`. Panel i callback Entra
+uzywaja osobnej nazwy `HELPDESK_OPERATOR_FQDN`, ktora host operatora kieruje
+do prywatnego Load Balancera po VPN.
 
 Publiczny formularz pozostaje dostępny z Internetu. Panel operatora i callback Entra są dostępne wyłącznie przez VPN.
 

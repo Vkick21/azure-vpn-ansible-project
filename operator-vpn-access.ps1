@@ -3,7 +3,7 @@ param(
     [ValidateSet("Add", "Remove", "Status")]
     [string]$Action,
 
-    [string]$Domain = $env:HELPDESK_FQDN,
+    [string]$Domain = $env:HELPDESK_OPERATOR_FQDN,
 
     [string]$PrivateIp = $env:HELPDESK_PRIVATE_IP
 )
@@ -12,10 +12,11 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 if (-not $Domain -or -not $PrivateIp) {
-    throw "Brakuje HELPDESK_FQDN lub HELPDESK_PRIVATE_IP."
+    throw "Brakuje HELPDESK_OPERATOR_FQDN lub HELPDESK_PRIVATE_IP."
 }
 
 $HostsPath = Join-Path $env:SystemRoot "System32\drivers\etc\hosts"
+$ManagedMarker = "# VKICKHAMSTER operator przez VPN"
 
 function Set-HostsFileWithRetry {
     param(
@@ -68,14 +69,14 @@ if ($Action -eq "Add") {
     }
 }
 
-# Usuwamy tylko wpis tej aplikacji i nie zmieniamy pozostalych linii hosts.
+# Usuwamy stary i nowy wpis tej aplikacji bez zmiany pozostalych linii hosts.
 $CurrentLines = Get-Content -LiteralPath $HostsPath
 $RemainingLines = $CurrentLines | Where-Object {
-    $_ -notmatch [regex]::Escape($Domain)
+    $_ -notmatch [regex]::Escape($ManagedMarker)
 }
 
 if ($Action -eq "Add") {
-    $RemainingLines += $PrivateIp + [char]9 + $Domain + " # VKICKHAMSTER operator przez VPN"
+    $RemainingLines += $PrivateIp + [char]9 + $Domain + " " + $ManagedMarker
 }
 
 Set-HostsFileWithRetry -Lines $RemainingLines
@@ -85,5 +86,5 @@ if ($Action -eq "Add") {
     Write-Host "Dodano prywatny dostep operatora przez VPN."
 }
 else {
-    Write-Host "Usunieto prywatne mapowanie. Domena wroci do publicznego adresu."
+    Write-Host "Usunieto prywatne mapowanie panelu operatora."
 }

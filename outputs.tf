@@ -12,6 +12,11 @@ output "helpdesk_fqdn" {
   value = "${azurerm_public_ip.lb.domain_name_label}.${azurerm_resource_group.main.location}.cloudapp.azure.com"
 }
 
+# Osobna nazwa uzywana tylko przez panel operatora.
+output "operator_fqdn" {
+  value = azurerm_traffic_manager_profile.operator.fqdn
+}
+
 # Prywatny adres panelu dostepny po zestawieniu VPN.
 output "helpdesk_private_ip" {
   value = "10.10.1.10"
