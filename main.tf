@@ -111,6 +111,19 @@ resource "azurerm_network_security_group" "app" {
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
+
+  # HTTPS udostępnia formularz bez wysyłania danych otwartym tekstem.
+  security_rule {
+    name                       = "AllowHTTPS"
+    priority                   = 1020
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
 }
 
 resource "azurerm_network_interface_security_group_association" "helpdesk01" {
@@ -189,6 +202,9 @@ resource "azurerm_public_ip" "lb" {
 
   allocation_method = "Static"
   sku               = "Standard"
+
+  # Bezpłatna nazwa Azure dla publicznego HelpDesk.
+  domain_name_label = "vkickhamster-helpdesk"
 }
 
 resource "azurerm_lb" "helpdesk" {
@@ -234,6 +250,22 @@ resource "azurerm_lb_rule" "http" {
   protocol                       = "Tcp"
   frontend_port                  = 80
   backend_port                   = 80
+  frontend_ip_configuration_name = "PublicIPAddress"
+
+  backend_address_pool_ids = [
+    azurerm_lb_backend_address_pool.helpdesk.id
+  ]
+
+  probe_id = azurerm_lb_probe.http.id
+}
+
+# HTTPS korzysta z tych samych serwerów i tego samego publicznego adresu IP.
+resource "azurerm_lb_rule" "https" {
+  loadbalancer_id                = azurerm_lb.helpdesk.id
+  name                           = "https-rule"
+  protocol                       = "Tcp"
+  frontend_port                  = 443
+  backend_port                   = 443
   frontend_ip_configuration_name = "PublicIPAddress"
 
   backend_address_pool_ids = [
@@ -350,6 +382,20 @@ resource "azurerm_storage_container" "documentation" {
 
 resource "azurerm_storage_container" "backups" {
   name                  = "backups"
+  storage_account_id    = azurerm_storage_account.helpdesk.id
+  container_access_type = "private"
+}
+
+# Publiczny kontener przechowuje tylko krótkotrwałe tokeny potwierdzające domenę dla certyfikatu.
+resource "azurerm_storage_container" "acme" {
+  name                  = "acme"
+  storage_account_id    = azurerm_storage_account.helpdesk.id
+  container_access_type = "blob"
+}
+
+# Certyfikat jest prywatny i dostępny tylko dla tożsamości serwerów.
+resource "azurerm_storage_container" "certificates" {
+  name                  = "certificates"
   storage_account_id    = azurerm_storage_account.helpdesk.id
   container_access_type = "private"
 }

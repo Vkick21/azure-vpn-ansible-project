@@ -7,7 +7,7 @@
   tasks:
     - name: Sprawdź health probe przez Load Balancer
       ansible.builtin.uri:
-        url: http://203.0.113.10/health/
+        url: https://helpdesk-demo.example.com/health/
         return_content: true
         status_code: 200
       register: public_health
@@ -15,8 +15,14 @@
 
     - name: Potwierdź blokadę publicznego panelu administratora
       ansible.builtin.uri:
-        url: http://203.0.113.10/admin/
+        url: https://helpdesk-demo.example.com/admin/
         status_code: 403
+
+    - name: Potwierdź przekierowanie HTTP do HTTPS
+      ansible.builtin.uri:
+        url: http://helpdesk-demo.example.com/
+        follow_redirects: none
+        status_code: 301
 
 - name: Sprawdź oba backendy aplikacji
   hosts: helpdesk
@@ -35,6 +41,16 @@
         status_code: 200
       register: backend_health
       failed_when: backend_health.json.database != "available"
+
+    - name: Sprawdź certyfikat na serwerze
+      ansible.builtin.command:
+        cmd: openssl x509 -in /etc/nginx/ssl/vkickhamster/fullchain.pem -noout -checkend 2592000
+      changed_when: false
+
+    - name: Sprawdź timer synchronizacji certyfikatu
+      ansible.builtin.command:
+        cmd: systemctl is-active helpdesk-certificate-sync.timer
+      changed_when: false
     - name: Sprawdź plik załącznika w Azure Storage
       ansible.builtin.command:
         argv:

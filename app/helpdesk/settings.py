@@ -35,6 +35,18 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+# Nginx kończy TLS i przekazuje Django informację, że użytkownik korzysta z HTTPS.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+HTTPS_ENABLED = os.getenv("DJANGO_HTTPS_ENABLED", "false").lower() == "true"
+SESSION_COOKIE_SECURE = HTTPS_ENABLED
+CSRF_COOKIE_SECURE = HTTPS_ENABLED
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

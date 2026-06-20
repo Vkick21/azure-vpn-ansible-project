@@ -13,6 +13,7 @@
     key_vault_name: kv-helpdesk-example
     database_host: 10.10.5.4
     load_balancer_ip: 203.0.113.10
+    helpdesk_domain: helpdesk-demo.example.com
 
   tasks:
     # Aplikacja działa na osobnym koncie bez dostępu do logowania.
@@ -30,6 +31,7 @@
           - python3-venv
           - python3-pip
           - rsync
+          - acl
         state: present
         update_cache: true
         cache_valid_time: 3600
@@ -94,7 +96,9 @@
           Environment=DATABASE_NAME=helpdesk
           Environment=DATABASE_USER=helpdesk_app
           Environment=AZURE_STORAGE_ACCOUNT=examplestorageaccount
-          Environment=DJANGO_ALLOWED_HOSTS={{ load_balancer_ip }},10.10.1.4,10.10.1.5,localhost,127.0.0.1
+          Environment=DJANGO_ALLOWED_HOSTS={{ helpdesk_domain }},{{ load_balancer_ip }},10.10.1.4,10.10.1.5,localhost,127.0.0.1
+          Environment=DJANGO_CSRF_TRUSTED_ORIGINS=https://{{ helpdesk_domain }}
+          Environment=DJANGO_HTTPS_ENABLED=true
           ExecStart={{ app_venv }}/bin/gunicorn --workers 2 --threads 2 --bind 127.0.0.1:8000 helpdesk.wsgi:application
           Restart=always
           RestartSec=5
@@ -106,6 +110,10 @@
       notify:
         - Przeładuj systemd
         - Uruchom ponownie HelpDesk
+
+    # Kod i zmienne usługi muszą działać przed migracją oraz kolejnymi testami.
+    - name: Zastosuj zmiany aplikacji przed migracją
+      ansible.builtin.meta: flush_handlers
 
     # Migrację wspólnej bazy wykonuje tylko pierwszy serwer.
     - name: Wykonaj migracje bazy
@@ -153,6 +161,11 @@
       register: static_files
       changed_when: "'0 static files copied' not in static_files.stdout"
 
+    - name: Sprawdź czy certyfikat HTTPS jest już dostępny
+      ansible.builtin.stat:
+        path: /etc/nginx/ssl/vkickhamster/fullchain.pem
+      register: tls_certificate
+
     # Panel administratora jest dostępny tylko od strony VPN lub Bastiona.
     - name: Skonfiguruj Nginx jako reverse proxy
       ansible.builtin.copy:
@@ -188,6 +201,7 @@
               }
           }
       notify: Przeładuj Nginx
+      when: not tls_certificate.stat.exists
 
     - name: Uruchom usługę HelpDesk
       ansible.builtin.systemd:
@@ -222,3 +236,7 @@
       ansible.builtin.service:
         name: nginx
         state: reloaded
+
+# HTTPS jest nakładany po wdrożeniu aplikacji, gdy certyfikat jest już dostępny.
+- name: Utrzymaj HTTPS dla VKICKHAMSTER
+  ansible.builtin.import_playbook: https.yml

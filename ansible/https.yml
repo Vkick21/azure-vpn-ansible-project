@@ -1,0 +1,336 @@
+---
+- name: Włącz HTTPS dla VKICKHAMSTER Helpdesk
+  hosts: helpdesk
+  become: true
+
+  vars:
+    helpdesk_domain: helpdesk-demo.example.com
+    storage_account_name: examplestorageaccount
+    certificate_root: /etc/nginx/ssl/vkickhamster
+    certificate_helper: /usr/local/sbin/helpdesk-certificate-storage.py
+    python_path: /opt/helpdesk/venv/bin/python
+
+  tasks:
+    - name: Przygotuj katalog certyfikatu
+      ansible.builtin.file:
+        path: "{{ certificate_root }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    # Skrypt używa Managed Identity, więc w plikach nie ma kluczy do Azure.
+    - name: Dodaj skrypt obsługujący token i certyfikat
+      ansible.builtin.copy:
+        dest: "{{ certificate_helper }}"
+        owner: root
+        group: root
+        mode: "0750"
+        content: |
+          #!/usr/bin/env python3
+          import os
+          import sys
+          from pathlib import Path
+
+          from azure.core.exceptions import ResourceNotFoundError
+          from azure.identity import ManagedIdentityCredential
+          from azure.storage.blob import BlobServiceClient, ContentSettings
+
+          account = "{{ storage_account_name }}"
+          domain = "{{ helpdesk_domain }}"
+          service = BlobServiceClient(
+              account_url=f"https://{account}.blob.core.windows.net",
+              credential=ManagedIdentityCredential(),
+          )
+
+          def upload_challenge():
+              token = os.environ["CERTBOT_TOKEN"]
+              value = os.environ["CERTBOT_VALIDATION"]
+              service.get_blob_client("acme", token).upload_blob(
+                  value,
+                  overwrite=True,
+                  content_settings=ContentSettings(content_type="text/plain"),
+              )
+
+          def cleanup_challenge():
+              token = os.environ["CERTBOT_TOKEN"]
+              try:
+                  service.get_blob_client("acme", token).delete_blob()
+              except ResourceNotFoundError:
+                  pass
+
+          def upload_certificate(fullchain, private_key):
+              container = service.get_container_client("certificates")
+              container.upload_blob(
+                  f"{domain}/fullchain.pem",
+                  Path(fullchain).read_bytes(),
+                  overwrite=True,
+              )
+              container.upload_blob(
+                  f"{domain}/privkey.pem",
+                  Path(private_key).read_bytes(),
+                  overwrite=True,
+              )
+
+          def download_certificate():
+              destination = Path("{{ certificate_root }}")
+              destination.mkdir(parents=True, exist_ok=True)
+              container = service.get_container_client("certificates")
+              files = {
+                  "fullchain.pem": 0o644,
+                  "privkey.pem": 0o600,
+              }
+              for name, mode in files.items():
+                  temporary = destination / f".{name}.new"
+                  temporary.write_bytes(
+                      container.download_blob(f"{domain}/{name}").readall()
+                  )
+                  temporary.chmod(mode)
+                  temporary.replace(destination / name)
+
+          action = sys.argv[1]
+          if action == "challenge":
+              upload_challenge()
+          elif action == "cleanup":
+              cleanup_challenge()
+          elif action == "upload":
+              upload_certificate(sys.argv[2], sys.argv[3])
+          elif action == "sync":
+              download_certificate()
+          else:
+              raise SystemExit(f"Nieznana akcja: {action}")
+
+    - name: Sprawdź czy lokalny certyfikat już istnieje
+      ansible.builtin.stat:
+        path: "{{ certificate_root }}/fullchain.pem"
+      register: local_certificate
+
+    # Na tym etapie Nginx udostępnia token ACME, ale jeszcze nie wymaga certyfikatu.
+    - name: Przygotuj weryfikację certyfikatu przez HTTP
+      ansible.builtin.copy:
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              server_name {{ helpdesk_domain }} _;
+
+              location ^~ /.well-known/acme-challenge/ {
+                  proxy_pass https://{{ storage_account_name }}.blob.core.windows.net/acme/;
+                  proxy_set_header Host {{ storage_account_name }}.blob.core.windows.net;
+                  proxy_ssl_server_name on;
+              }
+
+              location /static/ {
+                  alias /opt/helpdesk/app/staticfiles/;
+              }
+
+              location /admin/ {
+                  allow 172.20.200.0/24;
+                  allow 10.10.4.0/26;
+                  deny all;
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              }
+
+              location / {
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              }
+          }
+      notify: Przeładuj Nginx
+      when: not local_certificate.stat.exists
+
+    - name: Zastosuj konfigurację potrzebną do wydania certyfikatu
+      ansible.builtin.meta: flush_handlers
+
+    - name: Zainstaluj Certbot na serwerze odnawiającym
+      ansible.builtin.apt:
+        name: certbot
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+      when: inventory_hostname == groups['helpdesk'][0]
+
+    # Pierwszy serwer odnawia certyfikat, a oba pobierają tę samą kopię ze Storage.
+    - name: Pobierz lub odnów certyfikat Let's Encrypt
+      ansible.builtin.command:
+        argv:
+          - certbot
+          - certonly
+          - --manual
+          - --preferred-challenges
+          - http
+          - --manual-auth-hook
+          - "{{ python_path }} {{ certificate_helper }} challenge"
+          - --manual-cleanup-hook
+          - "{{ python_path }} {{ certificate_helper }} cleanup"
+          - --deploy-hook
+          - "{{ python_path }} {{ certificate_helper }} upload \"$RENEWED_LINEAGE/fullchain.pem\" \"$RENEWED_LINEAGE/privkey.pem\""
+          - --domain
+          - "{{ helpdesk_domain }}"
+          - --agree-tos
+          - --register-unsafely-without-email
+          - --non-interactive
+          - --keep-until-expiring
+      when: inventory_hostname == groups['helpdesk'][0]
+      register: certbot_result
+      changed_when: "'Successfully received certificate' in certbot_result.stdout"
+
+    - name: Umieść aktualny certyfikat w prywatnym Storage
+      ansible.builtin.command:
+        argv:
+          - "{{ python_path }}"
+          - "{{ certificate_helper }}"
+          - upload
+          - "/etc/letsencrypt/live/{{ helpdesk_domain }}/fullchain.pem"
+          - "/etc/letsencrypt/live/{{ helpdesk_domain }}/privkey.pem"
+      when: inventory_hostname == groups['helpdesk'][0]
+      changed_when: false
+
+    - name: Pobierz certyfikat na każdy serwer
+      ansible.builtin.command:
+        argv:
+          - "{{ python_path }}"
+          - "{{ certificate_helper }}"
+          - sync
+      changed_when: false
+
+    # Health po HTTP pozostaje dla Load Balancera, a ruch użytkowników przechodzi na HTTPS.
+    - name: Włącz HTTPS i przekierowanie ruchu
+      ansible.builtin.copy:
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              server_name {{ helpdesk_domain }} _;
+
+              location = /health/ {
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+              }
+
+              location ^~ /.well-known/acme-challenge/ {
+                  proxy_pass https://{{ storage_account_name }}.blob.core.windows.net/acme/;
+                  proxy_set_header Host {{ storage_account_name }}.blob.core.windows.net;
+                  proxy_ssl_server_name on;
+              }
+
+              # Panel po prywatnym IP nadal działa dla administratora po VPN.
+              location /admin/ {
+                  allow 172.20.200.0/24;
+                  allow 10.10.4.0/26;
+                  deny all;
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              }
+
+              location / {
+                  return 301 https://{{ helpdesk_domain }}$request_uri;
+              }
+          }
+
+          server {
+              listen 443 ssl default_server;
+              listen [::]:443 ssl default_server;
+              server_name {{ helpdesk_domain }};
+
+              ssl_certificate {{ certificate_root }}/fullchain.pem;
+              ssl_certificate_key {{ certificate_root }}/privkey.pem;
+              ssl_protocols TLSv1.2 TLSv1.3;
+              ssl_session_timeout 1d;
+              ssl_session_cache shared:VKICKHAMSTER:10m;
+
+              add_header Strict-Transport-Security "max-age=31536000" always;
+              add_header X-Content-Type-Options "nosniff" always;
+              add_header X-Frame-Options "DENY" always;
+
+              location /static/ {
+                  alias /opt/helpdesk/app/staticfiles/;
+              }
+
+              location /admin/ {
+                  allow 172.20.200.0/24;
+                  allow 10.10.4.0/26;
+                  deny all;
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto https;
+              }
+
+              location / {
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto https;
+              }
+          }
+      notify: Przeładuj Nginx
+
+    - name: Dodaj usługę synchronizacji certyfikatu
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/helpdesk-certificate-sync.service
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Synchronizacja certyfikatu VKICKHAMSTER
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=oneshot
+          ExecStart={{ python_path }} {{ certificate_helper }} sync
+          ExecStartPost=/usr/sbin/nginx -t
+          ExecStartPost=/bin/systemctl reload nginx
+
+    - name: Dodaj codzienny timer synchronizacji
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/helpdesk-certificate-sync.timer
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Codzienna synchronizacja certyfikatu VKICKHAMSTER
+
+          [Timer]
+          OnCalendar=daily
+          RandomizedDelaySec=30m
+          Persistent=true
+
+          [Install]
+          WantedBy=timers.target
+
+    - name: Uruchom timer synchronizacji certyfikatu
+      ansible.builtin.systemd:
+        name: helpdesk-certificate-sync.timer
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: Zastosuj końcową konfigurację Nginx
+      ansible.builtin.meta: flush_handlers
+
+  handlers:
+    - name: Przeładuj Nginx
+      ansible.builtin.shell:
+        cmd: nginx -t && systemctl reload nginx
+      changed_when: true
