@@ -1,0 +1,54 @@
+﻿---
+- name: Zarzadzaj operatorami VKICKHAMSTER Helpdesk
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    operator_action: list
+    operator_upn: ""
+    operator_group_id: "{{ lookup('ansible.builtin.env', 'ENTRA_OPERATOR_GROUP_ID') }}"
+
+  tasks:
+    # Playbook korzysta z aktywnej sesji Azure CLI na komputerze operatora.
+    - name: Sprawdz wymagane ustawienia
+      ansible.builtin.assert:
+        that:
+          - operator_action in ['list', 'add', 'remove']
+          - operator_group_id | length > 0
+          - operator_action == 'list' or operator_upn | length > 0
+        fail_msg: "Set ENTRA_OPERATOR_GROUP_ID and provide operator_upn for add or remove."
+
+    - name: Pokaz operatorow
+      ansible.builtin.command:
+        argv: [az, ad, group, member, list, --group, "{{ operator_group_id }}", --query, "[].{Name:displayName,Login:userPrincipalName}", --output, table]
+      changed_when: false
+      when: operator_action == 'list'
+
+    - name: Pobierz identyfikator uzytkownika
+      ansible.builtin.command:
+        argv: [az, ad, user, show, --id, "{{ operator_upn }}", --query, id, --output, tsv]
+      register: operator_user
+      changed_when: false
+      when: operator_action in ['add', 'remove']
+
+    - name: Sprawdz czlonkostwo operatora
+      ansible.builtin.command:
+        argv: [az, ad, group, member, check, --group, "{{ operator_group_id }}", --member-id, "{{ operator_user.stdout }}", --query, value, --output, tsv]
+      register: operator_membership
+      changed_when: false
+      when: operator_action in ['add', 'remove']
+
+    - name: Dodaj operatora do grupy
+      ansible.builtin.command:
+        argv: [az, ad, group, member, add, --group, "{{ operator_group_id }}", --member-id, "{{ operator_user.stdout }}"]
+      when:
+        - operator_action == 'add'
+        - operator_membership.stdout | trim | lower != 'true'
+
+    - name: Usun operatora z grupy
+      ansible.builtin.command:
+        argv: [az, ad, group, member, remove, --group, "{{ operator_group_id }}", --member-id, "{{ operator_user.stdout }}"]
+      when:
+        - operator_action == 'remove'
+        - operator_membership.stdout | trim | lower == 'true'

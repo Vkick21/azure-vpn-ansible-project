@@ -1,6 +1,7 @@
 """Widoki formularza publicznego, zdrowia i panelu operatora."""
 
 from django.contrib import messages
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
@@ -11,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import CreateView, DetailView, FormView, ListView, UpdateView
 
+from .captcha import verify_recaptcha
 from .forms import CommentForm, TicketCreateForm, TicketOperatorForm
 from .models import Ticket
 
@@ -19,6 +21,23 @@ class TicketCreateView(CreateView):
     model = Ticket
     form_class = TicketCreateForm
     template_name = "tickets/ticket_create.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["recaptcha_enabled"] = settings.RECAPTCHA_ENABLED
+        context["recaptcha_site_key"] = settings.RECAPTCHA_SITE_KEY
+        return context
+
+    def form_valid(self, form):
+        if settings.RECAPTCHA_ENABLED:
+            token = self.request.POST.get("g-recaptcha-response", "")
+            if not verify_recaptcha(token):
+                form.add_error(
+                    None,
+                    "Potwierdź, że nie jesteś robotem, i wyślij formularz ponownie.",
+                )
+                return self.form_invalid(form)
+        return super().form_valid(form)
 
     def get_success_url(self):
         return reverse("ticket-success", kwargs={"pk": self.object.pk})

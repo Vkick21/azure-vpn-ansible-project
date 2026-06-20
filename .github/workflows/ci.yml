@@ -78,6 +78,7 @@ jobs:
             nginx.yml \
             postgresql.yml \
             provision-client.yml \
+            manage-operator.yml \
             verify-helpdesk.yml
           do
             ansible-playbook -i inventory.ini "$playbook" --syntax-check

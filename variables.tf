@@ -33,15 +33,20 @@ variable "enable_bastion" {
 }
 
 variable "mode" {
-  description = "Environment mode: full or suspended"
+  description = "Reserved environment mode for compatibility"
   type        = string
   default     = "full"
 }
 
 variable "env_mode" {
-  description = "Tryb pracy srodowiska uzywany przez locals"
+  description = "Tryb srodowiska: full utrzymuje Bastion, suspended planuje jego usuniecie"
   type        = string
   default     = "full"
+
+  validation {
+    condition     = contains(["full", "suspended"], var.env_mode)
+    error_message = "env_mode musi miec wartosc full albo suspended."
+  }
 }
 variable "helpdesk_dns_label" {
   description = "DNS label for the public HelpDesk endpoint"

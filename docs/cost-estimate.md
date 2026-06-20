@@ -4,7 +4,9 @@ Region referencyjny: West Europe
 
 ## Szacunek miesięczny
 
-Na podstawie obserwowanego profilu usług przyjęto przedział **235–300 EUR miesięcznie** dla środowiska działającego przez całą dobę. Kwota jest orientacyjna i zależy od cennika subskrypcji, transferu, liczby logów oraz czasu pracy zasobów.
+Na podstawie kalkulatora Microsoft Azure przyjęto koszt około **353,34 USD miesięcznie** i **4 240,05 USD rocznie** dla środowiska działającego przez 730 godzin miesięcznie. Kwota jest orientacyjna i zależy od cennika subskrypcji, transferu, liczby logów oraz czasu pracy zasobów.
+
+Kalkulacja obejmuje trzy maszyny `Standard_B1s` z systemem Linux i trzema dyskami S4, Azure Bastion Basic, VPN Gateway VpnGw1AZ, konto Storage, Azure Monitor oraz dwa moduły Azure Load Balancer.
 
 Największe składniki kosztu:
 
@@ -36,3 +38,13 @@ cd C:\Projects\terraform
 ```
 
 Skrypt zapisuje pliki CSV w `docs/costs/`. Ten katalog jest ignorowany przez Git. Skrypt używa bieżącej sesji Azure CLI, a token pozostaje wyłącznie w pamięci procesu.
+
+## Demonstracja trybu oszczednego
+
+Polecenie ponizej generuje tylko plan usuniecia Bastiona i VPN Gateway. Nie wykonuje zadnej zmiany w Azure:
+
+```powershell
+.\env.ps1 -Action cost-plan
+```
+
+Na prezentacji nalezy pokazac podsumowanie planu, a nastepnie przerwac na etapie przed `terraform apply`. Zatrzymanie trzech VM przez `.\env.ps1 -Action stop` jest osobna operacja i nie usuwa dyskow ani danych PostgreSQL.

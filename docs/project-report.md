@@ -22,6 +22,7 @@ Projekt został przygotowany jako środowisko demonstracyjne, ale wykorzystuje r
 | Sekrety | Azure Key Vault |
 | Monitoring | Azure Monitor, Log Analytics |
 | Certyfikat | Let's Encrypt |
+| Ochrona formularza | Google reCAPTCHA v2 |
 
 ## 3. Architektura
 
@@ -90,7 +91,7 @@ Nginx dodatkowo blokuje publiczny dostęp do `/operator/`, `/oidc/` i `/admin/`.
 
 ## 7. Aplikacja Helpdesk
 
-Publiczny formularz umożliwia podanie adresu e-mail, tytułu, opisu, priorytetu i załącznika. Zgłoszenie jest zapisywane w PostgreSQL, a załącznik trafia do prywatnego kontenera Azure Storage.
+Publiczny formularz umożliwia podanie adresu e-mail, tytułu, opisu, priorytetu i załącznika. Przed zapisem użytkownik potwierdza pole Google reCAPTCHA v2, co ogranicza automatyczne wysyłanie zgłoszeń. Token jest sprawdzany po stronie Django, a prywatny klucz reCAPTCHA pozostaje w Azure Key Vault. Zgłoszenie jest zapisywane w PostgreSQL, a załącznik trafia do prywatnego kontenera Azure Storage.
 
 Panel operatora umożliwia:
 
@@ -103,6 +104,8 @@ Panel operatora umożliwia:
 - wylogowanie operatora.
 
 Operatorzy logują się przez Microsoft Entra ID. Dostęp otrzymują wyłącznie członkowie grupy `VKICKHAMSTER Helpdesk Operators`. Awaryjne konto lokalne może być użyte, gdy Entra ID jest niedostępne.
+
+W interfejsie operator jest prezentowany przy użyciu imienia i nazwiska z Entra ID. Techniczny identyfikator konta jest wykorzystywany wyłącznie jako wartość rezerwowa.
 
 ## 8. Baza danych i kopie zapasowe
 
@@ -143,14 +146,16 @@ Po wdrożeniu wykonano następujące testy:
 | Usługi Django, Nginx i PostgreSQL | aktywne |
 | DNS z wszystkich VM | poprawny |
 | HTTPS wychodzący z wszystkich VM | poprawny |
-| Testy Django | 11/11 |
+| reCAPTCHA obecna w formularzu | poprawna |
+| Formularz bez tokenu reCAPTCHA | odrzucony |
+| Testy Django | 14/14 |
 | Końcowy plan Terraform | No changes |
 
 Testy sieciowe po zmianach NSG nie wprowadzały danych do produkcyjnej bazy.
 
 ## 12. Kosztorys
 
-Szacowany koszt pracy środowiska przez cały miesiąc wynosi około `235–300 EUR`. Rzeczywiste dane rozliczeniowe są generowane lokalnie i nie są publikowane w repozytorium.
+Szacowany koszt pracy środowiska przez cały miesiąc wynosi około `353,34 USD`, a koszt roczny około `4 240,05 USD`. Kalkulacja zakłada 730 godzin działania i obejmuje trzy maszyny B1s z trzema dyskami S4, Azure Bastion, VPN Gateway, Storage, Azure Monitor oraz dwa Load Balancery.
 
 Największe składniki kosztu to Azure Bastion i VPN Gateway. VM `Standard_B1s` pozostają oszczędne, jednak zatrzymanie VM nie zatrzymuje opłat za bramę i Bastion.
 
@@ -170,3 +175,9 @@ Możliwe rozszerzenia to powiadomienia e-mail, SLA zgłoszeń, historia audytowa
 ## 14. Podsumowanie
 
 Projekt realizuje kompletny przepływ: publiczny użytkownik wysyła zgłoszenie, dane trafiają do PostgreSQL i Azure Storage, a operator po VPN loguje się przez Entra ID i obsługuje zgłoszenie. Infrastruktura, konfiguracja, bezpieczeństwo, kopie zapasowe i kosztorys są odtwarzalne z repozytorium.
+
+## 15. Demonstracja dzialajacego projektu
+
+Podczas prezentacji system moze zostac pokazany jako aktywne srodowisko, a nie statyczny zestaw plikow. Autor moze wyslac publiczne zgloszenie, polaczyc VPN, zalogowac operatora przez Entra ID, obsluzyc ticket oraz pokazac plan kontroli kosztow.
+
+Polecenie `.\env.ps1 -Action cost-plan` przedstawia plan usuniecia Bastiona i VPN Gateway bez wykonywania `terraform apply`. Polecenia `.\env.ps1 -Action stop` i `.\env.ps1 -Action start` zarzadzaja stanem trzech VM w bezpiecznej kolejnosci. Operatorami mozna zarzadzac idempotentnym playbookiem `ansible/manage-operator.yml`.

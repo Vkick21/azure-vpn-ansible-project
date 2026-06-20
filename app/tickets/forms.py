@@ -6,6 +6,13 @@ from django.contrib.auth.models import User
 from .models import Comment, Ticket
 
 
+class OperatorChoiceField(forms.ModelChoiceField):
+    """Pokazuje czytelna nazwe operatora zamiast identyfikatora Entra."""
+
+    def label_from_instance(self, user):
+        return user.get_full_name() or user.email or user.username
+
+
 class TicketCreateForm(forms.ModelForm):
     class Meta:
         model = Ticket
@@ -15,6 +22,12 @@ class TicketCreateForm(forms.ModelForm):
 
 class TicketOperatorForm(forms.ModelForm):
     """Pola zmieniane przez operatora podczas obsługi zgłoszenia."""
+
+    assigned_to = OperatorChoiceField(
+        queryset=User.objects.none(),
+        required=False,
+        label="Operator",
+    )
 
     class Meta:
         model = Ticket

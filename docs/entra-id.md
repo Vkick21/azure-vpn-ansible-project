@@ -43,3 +43,15 @@ Kontrola połączenia:
 Usunięcie prywatnego mapowania:
 
     .operator-vpn-access.ps1 -Action Remove
+
+## Zarzadzanie operatorami przez Ansible
+
+Playbook `ansible/manage-operator.yml` zarzadza czlonkostwem w grupie Entra ID. Wymaga aktywnej sesji Azure CLI oraz zmiennej `ENTRA_OPERATOR_GROUP_ID`.
+
+```bash
+ansible-playbook manage-operator.yml -e operator_action=list
+ansible-playbook manage-operator.yml -e operator_action=add -e operator_upn=user@example.com
+ansible-playbook manage-operator.yml -e operator_action=remove -e operator_upn=user@example.com
+```
+
+Playbook jest idempotentny: nie dodaje ponownie istniejacego czlonka i nie probuje usunac osoby, ktora nie nalezy do grupy.

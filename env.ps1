@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("start", "stop", "restart", "status", "plan")]
+    [ValidateSet("start", "stop", "restart", "status", "plan", "cost-plan")]
     [string]$Action,
 
     [string]$ResourceGroup = "rg-helpdesk-prod"
@@ -68,5 +68,11 @@ switch ($Action)
     "plan" {
         # Plan tylko pokazuje zmiany i niczego nie wdraza.
         terraform plan
+    }
+
+    "cost-plan" {
+        # Ten wariant pokazuje oszczednosci bez wykonywania zmian w Azure.
+        Write-Host "Cost plan only - Bastion and VPN would be removed. No apply is executed."
+        terraform plan -var="enable_bastion=false" -var="enable_vpn=false"
     }
 }
