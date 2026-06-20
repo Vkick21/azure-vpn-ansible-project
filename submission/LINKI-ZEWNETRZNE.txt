@@ -1,0 +1,50 @@
+VKICKHAMSTER Helpdesk - linki zewnetrzne
+=======================================
+
+Zasoby projektu
+---------------
+
+Repozytorium GitHub - obecnie wymaga przyznanego dostepu:
+https://github.com/Vkick21/azure-vpn-ansible-project
+
+Publiczny formularz Helpdesk:
+https://vkickhamster-helpdesk.westeurope.cloudapp.azure.com/
+
+Panel operatora - wymaga aktywnego VPN i konta w grupie Entra ID:
+https://vkickhamster-helpdesk.westeurope.cloudapp.azure.com/operator/
+
+Kalkulator kosztow Microsoft Azure:
+https://azure.microsoft.com/pl-pl/pricing/calculator/
+
+Dokumentacja wykorzystanych technologii
+----------------------------------------
+
+Microsoft Azure - dokumentacja Terraform:
+https://learn.microsoft.com/azure/developer/terraform/
+
+Microsoft Azure VPN Gateway:
+https://learn.microsoft.com/azure/vpn-gateway/
+
+Microsoft Azure Bastion:
+https://learn.microsoft.com/azure/bastion/
+
+Microsoft Entra ID:
+https://learn.microsoft.com/entra/identity/
+
+Ansible:
+https://docs.ansible.com/ansible/latest/
+
+Django:
+https://docs.djangoproject.com/en/5.2/
+
+PostgreSQL:
+https://www.postgresql.org/docs/
+
+Google reCAPTCHA v2:
+https://developers.google.com/recaptcha/docs/display
+
+Uwaga
+-----
+
+Linki do zasobow w Azure Portal nie zostaly dolaczone, poniewaz wymagaja
+dostepu do prywatnej subskrypcji i moglyby ujawniac identyfikatory srodowiska.
