@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 
 $Domain = "helpdesk-demo.example.com"
 $PrivateIp = "10.10.1.10"
-$HostsPath = "$env:SystemRootSystem32driversetchosts"
+$HostsPath = Join-Path $env:SystemRoot "System32\drivers\etc\hosts"
 
 $Principal = New-Object Security.Principal.WindowsPrincipal(
     [Security.Principal.WindowsIdentity]::GetCurrent()
