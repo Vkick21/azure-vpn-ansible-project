@@ -78,3 +78,4 @@ Aktualizacja kosztorysu:
 - [Routing i NSG](docs/network-security.md)
 - [Kosztorys](docs/cost-estimate.md)
 - [Microsoft Entra ID](docs/entra-id.md)
+- [Dowody wdrożenia i testów](docs/evidence/test-summary.md)

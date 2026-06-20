@@ -1,16 +1,42 @@
+# Terraform local files
 .terraform/
 *.tfstate
-*.tfstate.backup
+*.tfstate.*
 *.tfvars
 *.tfplan
 .terraform.lock.hcl
+crash.log
+crash.*.log
 state-before.txt
 state-full.txt
 outputs-before.txt
 errored.tfstate
 backend.tf.disabled
+
+# Local secrets and certificates
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Python and Django runtime files
 .venv/
+venv/
 __pycache__/
-*.pyc
+*.py[cod]
 test.sqlite3
+media/
+staticfiles/
 app/media/
+
+# Ansible and editor cache
+.ansible/
+.vscode/
+.idea/
+*.swp
+
+# Operating system files
+.DS_Store
+Thumbs.db
