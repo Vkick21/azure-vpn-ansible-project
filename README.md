@@ -82,13 +82,13 @@ Prywatnego klucza nie należy zapisywać w repozytorium.
 Interaktywny przewodnik do prezentacji projektu:
 
 ```powershell
-.\presentation-demo.ps1
+.\presentation-demo.ps1 -OperatorUpn "user@example.com"
 ```
 
 Opcjonalne automatyczne otwieranie formularza i panelu:
 
 ```powershell
-.\presentation-demo.ps1 -OpenPages
+.\presentation-demo.ps1 -OperatorUpn "user@example.com" -OpenPages
 ```
 
 Dodanie operatora przez Ansible uruchamiane z PowerShell:

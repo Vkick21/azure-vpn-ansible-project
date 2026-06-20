@@ -1,4 +1,7 @@
 param(
+    [ValidatePattern('^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$')]
+    [string]$OperatorUpn = "user@example.com",
+
     [switch]$OpenPages,
     [switch]$NoPause
 )
@@ -59,6 +62,7 @@ $OperatorUrl = "https://$($env:HELPDESK_FQDN)/operator/"
 Write-DemoHeader "VKICKHAMSTER Helpdesk - scenariusz prezentacji"
 Write-Host "Skrypt jest przewodnikiem i nie wykonuje terraform apply." -ForegroundColor Magenta
 Write-Host "Zdalny host operatora musi miec wczesniej profil i certyfikat VPN." -ForegroundColor Magenta
+Write-Host "Konto demonstracyjne: $OperatorUpn"
 Write-Host "Publiczny formularz: $PublicUrl"
 Write-Host "Panel operatora:     $OperatorUrl"
 
@@ -98,9 +102,20 @@ Write-DemoStep `
 
 Write-DemoStep `
     -Number 4 `
+    -Title "Dodanie operatora przez Ansible" `
+    -Explanation "PowerShell przekazuje UPN do WSL, a Ansible idempotentnie dodaje konto do grupy operatorow Entra ID." `
+    -Commands @(
+        ".\add-operator-ansible.ps1 -UserPrincipalName `"$OperatorUpn`"",
+        ".\entra-operators.ps1 -Action List"
+    ) `
+    -Expected "Konto jest widoczne w grupie VKICKHAMSTER Helpdesk Operators."
+
+Write-DemoStep `
+    -Number 5 `
     -Title "Zdalny host operatora i polaczenie VPN" `
     -Explanation "Na przygotowanym zdalnym hoscie polacz profil vnet-helpdesk. Host ma juz zainstalowany certyfikat i profil VPN." `
     -Commands @(
+        "W Azure VPN Client kliknij Polacz dla profilu vnet-helpdesk.",
         "Test-NetConnection 10.10.1.10 -Port 443",
         ".\operator-vpn-access.ps1 -Action Add",
         ".\operator-vpn-access.ps1 -Action Status"
@@ -108,13 +123,12 @@ Write-DemoStep `
     -Expected "TcpTestSucceeded ma wartosc True, a domena wskazuje 10.10.1.10."
 
 Write-DemoStep `
-    -Number 5 `
+    -Number 6 `
     -Title "Logowanie Microsoft Entra ID" `
     -Explanation "Operator musi nalezec do grupy Entra ID i zalogowac sie przez prywatny panel po VPN." `
     -Commands @(
-        ".\entra-operators.ps1 -Action List",
-        '.\add-operator-ansible.ps1 -UserPrincipalName "user@example.com"',
-        "Otworz $OperatorUrl"
+        "Otworz $OperatorUrl",
+        "Zaloguj sie jako $OperatorUpn"
     ) `
     -Expected "Po logowaniu widoczny jest panel i czytelna nazwa operatora."
 
@@ -123,7 +137,7 @@ if ($OpenPages) {
 }
 
 Write-DemoStep `
-    -Number 6 `
+    -Number 7 `
     -Title "Obsluga zgloszenia" `
     -Explanation "W panelu odnajdujemy ticket z kroku 2, przypisujemy operatora, dodajemy komentarz i zmieniamy status." `
     -Commands @(
@@ -133,17 +147,16 @@ Write-DemoStep `
     -Expected "Historia i aktualny stan zgloszenia sa zapisane w PostgreSQL."
 
 Write-DemoStep `
-    -Number 7 `
-    -Title "Automatyzacja Ansible" `
-    -Explanation "Ansible potwierdza dostep do wszystkich VM i zarzadza grupa operatorow." `
+    -Number 8 `
+    -Title "Kontrola serwerow przez Ansible" `
+    -Explanation "Ansible potwierdza prywatny dostep SSH do wszystkich maszyn projektu." `
     -Commands @(
-        'wsl bash -lc "cd /mnt/c/Projects/terraform/ansible && ansible all -i inventory.ini -m ping"',
-        'wsl bash -lc "cd /mnt/c/Projects/terraform/ansible && ansible-playbook manage-operator.yml -e operator_action=list"'
+        'wsl bash -lc "cd /mnt/c/Projects/terraform/ansible && ansible all -i inventory.ini -m ping"'
     ) `
-    -Expected "Wszystkie hosty odpowiadaja, a lista operatorow jest odczytana z Entra ID."
+    -Expected "helpdesk01, helpdesk02 i helpdesk-db01 zwracaja SUCCESS."
 
 Write-DemoStep `
-    -Number 8 `
+    -Number 9 `
     -Title "Walidacja Terraform" `
     -Explanation "Sprawdzamy kod i plan bez wprowadzania zmian w Azure." `
     -Commands @(
@@ -156,7 +169,7 @@ Write-DemoStep `
 Write-Host "UWAGA: Podczas prezentacji nie wykonuj terraform apply." -ForegroundColor Red
 
 Write-DemoStep `
-    -Number 9 `
+    -Number 10 `
     -Title "Kontrola kosztow" `
     -Explanation "Plan oszczedny pokazuje usuniecie Bastiona i VPN Gateway, ale nie wykonuje zmian." `
     -Commands @(
@@ -165,13 +178,14 @@ Write-DemoStep `
     -Expected "Terraform pokazuje plan oszczednosci bez wykonania apply."
 
 Write-DemoStep `
-    -Number 10 `
+    -Number 11 `
     -Title "Zakonczenie prezentacji" `
-    -Explanation "Usuwamy tylko lokalne mapowanie domeny. Aplikacja, konta i dane pozostaja bez zmian." `
+    -Explanation "Usuwamy lokalne mapowanie domeny. Opcjonalnie odbieramy testowemu kontu czlonkostwo w grupie operatorow." `
     -Commands @(
-        ".\operator-vpn-access.ps1 -Action Remove"
+        ".\operator-vpn-access.ps1 -Action Remove",
+        ".\entra-operators.ps1 -Action Remove -UserPrincipalName `"$OperatorUpn`"  # opcjonalnie"
     ) `
-    -Expected "Publiczny formularz dziala, a panel operatora ponownie jest blokowany publicznie."
+    -Expected "Publiczny formularz dziala, panel jest blokowany publicznie, a dane zgloszen pozostaja bez zmian."
 
 Write-DemoHeader "Koniec scenariusza"
 Write-Host "Najwazniejszy przeplyw: formularz -> CAPTCHA -> VPN -> Entra ID -> obsluga ticketu."
