@@ -43,3 +43,7 @@ variable "env_mode" {
   type        = string
   default     = "full"
 }
+variable "helpdesk_dns_label" {
+  description = "DNS label for the public HelpDesk endpoint"
+  type        = string
+}

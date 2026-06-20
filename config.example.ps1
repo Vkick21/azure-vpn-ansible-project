@@ -1,0 +1,11 @@
+# Copy this file to config.local.ps1 and enter values for your Azure environment.
+$env:TF_VAR_helpdesk_dns_label = "helpdesk-demo"
+$env:HELPDESK_FQDN = "helpdesk-demo.example.com"
+$env:HELPDESK_PUBLIC_IP = "203.0.113.10"
+$env:HELPDESK_PRIVATE_IP = "10.10.1.10"
+$env:HELPDESK_DATABASE_IP = "10.10.5.4"
+$env:AZURE_STORAGE_ACCOUNT = "examplestorageaccount"
+$env:KEY_VAULT_NAME = "kv-helpdesk-example"
+$env:ENTRA_TENANT_ID = "00000000-0000-0000-0000-000000000000"
+$env:ENTRA_CLIENT_ID = "00000000-0000-0000-0000-000000000000"
+$env:ENTRA_OPERATOR_GROUP_ID = "00000000-0000-0000-0000-000000000000"

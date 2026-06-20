@@ -10,13 +10,13 @@
     app_root: /opt/helpdesk
     app_code: /opt/helpdesk/app
     app_venv: /opt/helpdesk/venv
-    key_vault_name: kv-helpdesk-example
+    key_vault_name: "{{ lookup('ansible.builtin.env', 'KEY_VAULT_NAME') }}"
     database_host: 10.10.5.4
-    load_balancer_ip: 203.0.113.10
-    helpdesk_domain: helpdesk-demo.example.com
-    entra_tenant_id: <ENTRA_TENANT_ID>
-    entra_client_id: <ENTRA_CLIENT_ID>
-    entra_operator_group_id: <ENTRA_OPERATOR_GROUP_ID>
+    load_balancer_ip: "{{ lookup('ansible.builtin.env', 'HELPDESK_PUBLIC_IP') }}"
+    helpdesk_domain: "{{ lookup('ansible.builtin.env', 'HELPDESK_FQDN') }}"
+    entra_tenant_id: "{{ lookup('ansible.builtin.env', 'ENTRA_TENANT_ID') }}"
+    entra_client_id: "{{ lookup('ansible.builtin.env', 'ENTRA_CLIENT_ID') }}"
+    entra_operator_group_id: "{{ lookup('ansible.builtin.env', 'ENTRA_OPERATOR_GROUP_ID') }}"
 
   tasks:
     # Aplikacja dziala na osobnym koncie bez dostepu do logowania.
@@ -98,7 +98,7 @@
           Environment=DATABASE_HOST={{ database_host }}
           Environment=DATABASE_NAME=helpdesk
           Environment=DATABASE_USER=helpdesk_app
-          Environment=AZURE_STORAGE_ACCOUNT=examplestorageaccount
+          Environment=AZURE_STORAGE_ACCOUNT={{ storage_account_name }}
           Environment=DJANGO_ALLOWED_HOSTS={{ helpdesk_domain }},{{ load_balancer_ip }},10.10.1.4,10.10.1.5,localhost,127.0.0.1
           Environment=DJANGO_CSRF_TRUSTED_ORIGINS=https://{{ helpdesk_domain }}
           Environment=DJANGO_HTTPS_ENABLED=true

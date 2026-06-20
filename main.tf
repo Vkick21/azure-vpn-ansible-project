@@ -291,7 +291,7 @@ resource "azurerm_public_ip" "lb" {
   sku               = "Standard"
 
   # Bezplatna nazwa Azure dla publicznego HelpDesk.
-  domain_name_label = "vkickhamster-helpdesk"
+  domain_name_label = var.helpdesk_dns_label
 }
 
 resource "azurerm_lb" "helpdesk" {

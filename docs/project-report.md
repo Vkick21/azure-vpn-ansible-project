@@ -150,11 +150,11 @@ Testy sieciowe po zmianach NSG nie wprowadzały danych do produkcyjnej bazy.
 
 ## 12. Kosztorys
 
-Rzeczywisty koszt miesiąc-do-daty w chwili wykonania raportu wynosił `<LOCAL_COST>`. Ostatnia pełna doba kosztowała `<LOCAL_DAILY_COST>`. Przewidywany koszt pracy przez cały miesiąc wynosi około `235–300 EUR`.
+Szacowany koszt pracy środowiska przez cały miesiąc wynosi około `235–300 EUR`. Rzeczywiste dane rozliczeniowe są generowane lokalnie i nie są publikowane w repozytorium.
 
 Największe składniki kosztu to Azure Bastion i VPN Gateway. VM `Standard_B1s` pozostają oszczędne, jednak zatrzymanie VM nie zatrzymuje opłat za bramę i Bastion.
 
-Pełny kosztorys oraz dane CSV znajdują się w `docs/cost-estimate.md` i `docs/costs/`.
+Metoda przygotowania kosztorysu znajduje się w `docs/cost-estimate.md`. Dane CSV są generowane lokalnie i ignorowane przez Git.
 
 ## 13. Ograniczenia i dalszy rozwój
 

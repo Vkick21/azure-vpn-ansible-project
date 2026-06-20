@@ -6,12 +6,12 @@
   vars:
     app_code: /opt/helpdesk/app
     app_venv: /opt/helpdesk/venv
-    key_vault_name: kv-helpdesk-example
+    key_vault_name: "{{ lookup('ansible.builtin.env', 'KEY_VAULT_NAME') }}"
     database_host: 10.10.5.4
-    helpdesk_domain: helpdesk-demo.example.com
-    entra_tenant_id: <ENTRA_TENANT_ID>
-    entra_client_id: <ENTRA_CLIENT_ID>
-    entra_operator_group_id: <ENTRA_OPERATOR_GROUP_ID>
+    helpdesk_domain: "{{ lookup('ansible.builtin.env', 'HELPDESK_FQDN') }}"
+    entra_tenant_id: "{{ lookup('ansible.builtin.env', 'ENTRA_TENANT_ID') }}"
+    entra_client_id: "{{ lookup('ansible.builtin.env', 'ENTRA_CLIENT_ID') }}"
+    entra_operator_group_id: "{{ lookup('ansible.builtin.env', 'ENTRA_OPERATOR_GROUP_ID') }}"
 
   tasks:
     # Ta sciezka sluzy do zmian interfejsu, ktore nie wymagaja migracji.
@@ -47,7 +47,7 @@
         DATABASE_NAME: helpdesk
         DATABASE_USER: helpdesk_app
         DJANGO_ALLOWED_HOSTS: "{{ helpdesk_domain }},localhost"
-        AZURE_STORAGE_ACCOUNT: examplestorageaccount
+        AZURE_STORAGE_ACCOUNT: "{{ storage_account_name }}"
         ENTRA_TENANT_ID: "{{ entra_tenant_id }}"
         ENTRA_CLIENT_ID: "{{ entra_client_id }}"
         ENTRA_OPERATOR_GROUP_ID: "{{ entra_operator_group_id }}"

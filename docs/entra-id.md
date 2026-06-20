@@ -8,7 +8,7 @@ Panel operatora używa logowania Microsoft przez OpenID Connect.
 - Client ID: <ENTRA_CLIENT_ID>
 - Grupa operatorów: VKICKHAMSTER Helpdesk Operators
 - Group ID: <ENTRA_OPERATOR_GROUP_ID>
-- Callback: https://helpdesk-demo.example.com/oidc/callback/
+- Callback: https://<HELPDESK_FQDN>/oidc/callback/
 - Sekret w Key Vault: entra-client-secret
 
 Wartość sekretu nie znajduje się w repozytorium. Serwery pobierają ją z Key Vault przez Managed Identity.

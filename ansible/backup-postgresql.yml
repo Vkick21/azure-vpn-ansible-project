@@ -5,7 +5,7 @@
 
   vars:
     backup_root: /opt/helpdesk-backup
-    storage_account_name: examplestorageaccount
+    storage_account_name: "{{ lookup('ansible.builtin.env', 'AZURE_STORAGE_ACCOUNT') }}"
 
   tasks:
     # Osobne srodowisko Python nie miesza zaleznosci z systemem.

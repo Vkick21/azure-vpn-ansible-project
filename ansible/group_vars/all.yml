@@ -1,0 +1,10 @@
+# Values that identify a concrete Azure environment stay outside Git.
+helpdesk_domain: "{{ lookup('ansible.builtin.env', 'HELPDESK_FQDN') }}"
+helpdesk_public_ip: "{{ lookup('ansible.builtin.env', 'HELPDESK_PUBLIC_IP') }}"
+helpdesk_private_ip: "{{ lookup('ansible.builtin.env', 'HELPDESK_PRIVATE_IP') | default('10.10.1.10', true) }}"
+database_host: "{{ lookup('ansible.builtin.env', 'HELPDESK_DATABASE_IP') | default('10.10.5.4', true) }}"
+storage_account_name: "{{ lookup('ansible.builtin.env', 'AZURE_STORAGE_ACCOUNT') }}"
+key_vault_name: "{{ lookup('ansible.builtin.env', 'KEY_VAULT_NAME') }}"
+entra_tenant_id: "{{ lookup('ansible.builtin.env', 'ENTRA_TENANT_ID') }}"
+entra_client_id: "{{ lookup('ansible.builtin.env', 'ENTRA_CLIENT_ID') }}"
+entra_operator_group_id: "{{ lookup('ansible.builtin.env', 'ENTRA_OPERATOR_GROUP_ID') }}"

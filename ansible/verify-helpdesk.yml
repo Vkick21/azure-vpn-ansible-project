@@ -7,7 +7,7 @@
   tasks:
     - name: Sprawdz health probe przez Load Balancer
       ansible.builtin.uri:
-        url: https://helpdesk-demo.example.com/health/
+        url: "https://{{ helpdesk_domain }}/health/"
         return_content: true
         status_code: 200
       register: public_health
@@ -15,12 +15,12 @@
 
     - name: Potwierdz blokade publicznego panelu administratora
       ansible.builtin.uri:
-        url: https://helpdesk-demo.example.com/admin/
+        url: "https://{{ helpdesk_domain }}/admin/"
         status_code: 403
 
     - name: Potwierdz przekierowanie HTTP do HTTPS
       ansible.builtin.uri:
-        url: http://helpdesk-demo.example.com/
+        url: "http://{{ helpdesk_domain }}/"
         follow_redirects: none
         status_code: 301
 
@@ -65,12 +65,12 @@
             print(default_storage.exists(ticket.attachment.name))
         chdir: /opt/helpdesk/app
       environment:
-        KEY_VAULT_NAME: kv-helpdesk-example
+        KEY_VAULT_NAME: "{{ key_vault_name }}"
         DATABASE_HOST: 10.10.5.4
         DATABASE_NAME: helpdesk
         DATABASE_USER: helpdesk_app
         DJANGO_ALLOWED_HOSTS: localhost
-        AZURE_STORAGE_ACCOUNT: examplestorageaccount
+        AZURE_STORAGE_ACCOUNT: "{{ storage_account_name }}"
       register: attachment_exists
       changed_when: false
       run_once: true
@@ -123,7 +123,7 @@
             from azure.identity import ManagedIdentityCredential;
             from azure.storage.blob import BlobServiceClient;
             service = BlobServiceClient(
-              account_url="https://examplestorageaccount.blob.core.windows.net",
+              account_url="https://{{ storage_account_name }}.blob.core.windows.net",
               credential=ManagedIdentityCredential()
             );
             print(sum(1 for blob in service.get_container_client("backups").list_blobs(name_starts_with="postgresql/")))

@@ -22,7 +22,7 @@ Projekt przedstawia kompletny system Helpdesk uruchomiony w Microsoft Azure. Inf
 Publiczny formularz:
 
 ```text
-https://helpdesk-demo.example.com/
+https://<HELPDESK_FQDN>/
 ```
 
 Panel operatora wymaga aktywnego VPN oraz prywatnego mapowania domeny:
@@ -50,6 +50,17 @@ Usunięcie mapowania:
 - `env.ps1` — planowanie oraz sterowanie środowiskiem;
 - `entra-operators.ps1` — zarządzanie grupą operatorów;
 - `operator-vpn-access.ps1` — prywatne mapowanie domeny panelu.
+
+## Konfiguracja lokalna
+
+Rzeczywiste identyfikatory środowiska nie są przechowywane w Git. Przed użyciem skryptów skopiuj plik przykładowy i wpisz własne wartości:
+
+```powershell
+Copy-Item .\config.example.ps1 .\config.local.ps1
+. .\config.local.ps1
+```
+
+Plik `config.local.ps1` jest ignorowany przez Git.
 
 ## Podstawowe polecenia
 

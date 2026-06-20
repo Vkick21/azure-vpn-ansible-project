@@ -1,14 +1,20 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateSet("Add", "Remove", "Status")]
-    [string]$Action
+    [string]$Action,
+
+    [string]$Domain = $env:HELPDESK_FQDN,
+
+    [string]$PrivateIp = $env:HELPDESK_PRIVATE_IP
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$Domain = "helpdesk-demo.example.com"
-$PrivateIp = "10.10.1.10"
+if (-not $Domain -or -not $PrivateIp) {
+    throw "Brakuje HELPDESK_FQDN lub HELPDESK_PRIVATE_IP."
+}
+
 $HostsPath = Join-Path $env:SystemRoot "System32\drivers\etc\hosts"
 
 $Principal = New-Object Security.Principal.WindowsPrincipal(

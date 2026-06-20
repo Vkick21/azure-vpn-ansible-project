@@ -11,6 +11,12 @@ Set-StrictMode -Version Latest
 # Skrypt dziala zawsze wzgledem katalogu projektu.
 Set-Location $PSScriptRoot
 
+# Local environment values are intentionally ignored by Git.
+$ConfigPath = Join-Path $PSScriptRoot "config.local.ps1"
+if (Test-Path -LiteralPath $ConfigPath) {
+    . $ConfigPath
+}
+
 # Baza uruchamia sie przed aplikacja i zatrzymuje jako ostatnia.
 $AppVmNames = @("helpdesk01", "helpdesk02")
 $DatabaseVmName = "helpdesk-db01"

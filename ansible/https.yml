@@ -4,8 +4,8 @@
   become: true
 
   vars:
-    helpdesk_domain: helpdesk-demo.example.com
-    storage_account_name: examplestorageaccount
+    helpdesk_domain: "{{ lookup('ansible.builtin.env', 'HELPDESK_FQDN') }}"
+    storage_account_name: "{{ lookup('ansible.builtin.env', 'AZURE_STORAGE_ACCOUNT') }}"
     certificate_root: /etc/nginx/ssl/vkickhamster
     certificate_helper: /usr/local/sbin/helpdesk-certificate-storage.py
     python_path: /opt/helpdesk/venv/bin/python

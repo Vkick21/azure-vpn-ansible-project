@@ -3,14 +3,18 @@ param(
     [ValidateSet("List", "Add", "Remove")]
     [string]$Action,
 
-    [string]$UserPrincipalName
+    [string]$UserPrincipalName,
+
+    [string]$GroupId = $env:ENTRA_OPERATOR_GROUP_ID
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # Dostep do panelu wynika wylacznie z czlonkostwa w tej grupie.
-$GroupId = "<ENTRA_OPERATOR_GROUP_ID>"
+if (-not $GroupId) {
+    throw "Brakuje ENTRA_OPERATOR_GROUP_ID lub parametru -GroupId."
+}
 
 if ($Action -eq "List") {
     az ad group member list --group $GroupId --query "[].{Name:displayName,Login:userPrincipalName}" --output table
