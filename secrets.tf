@@ -1,4 +1,4 @@
-# Losowe wartości trafiają do zdalnego stanu Terraform i Key Vault.
+# Losowe wartosci trafiaja do zdalnego stanu Terraform i Key Vault.
 resource "random_password" "database" {
   length  = 32
   special = false
@@ -9,7 +9,7 @@ resource "random_password" "django" {
   special = false
 }
 
-# Key Vault udostępnia sekrety aplikacji przez Managed Identity.
+# Key Vault udostepnia sekrety aplikacji przez Managed Identity.
 resource "azurerm_key_vault" "helpdesk" {
   name                       = "kv-helpdesk-${random_string.storage.result}"
   location                   = azurerm_resource_group.main.location
@@ -19,7 +19,7 @@ resource "azurerm_key_vault" "helpdesk" {
   soft_delete_retention_days = 7
   purge_protection_enabled   = false
 
-  # Terraform może utworzyć i aktualizować sekrety.
+  # Terraform moze utworzyc i aktualizowac sekrety.
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
     object_id = data.azurerm_client_config.current.object_id
@@ -34,7 +34,7 @@ resource "azurerm_key_vault" "helpdesk" {
     ]
   }
 
-  # Obie VM aplikacyjne mogą tylko odczytywać sekrety.
+  # Obie VM aplikacyjne moga tylko odczytywac sekrety.
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
     object_id = azurerm_linux_virtual_machine.helpdesk01.identity[0].principal_id
@@ -68,7 +68,7 @@ resource "azurerm_key_vault_secret" "django_secret_key" {
   key_vault_id = azurerm_key_vault.helpdesk.id
 }
 
-# Hasło pierwszego operatora można później odczytać z Key Vault.
+# Haslo pierwszego operatora mozna pozniej odczytac z Key Vault.
 resource "random_password" "django_admin" {
   length  = 24
   special = false

@@ -9,7 +9,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# Dostęp do panelu wynika wyłącznie z członkostwa w tej grupie.
+# Dostep do panelu wynika wylacznie z czlonkostwa w tej grupie.
 $GroupId = "<ENTRA_OPERATOR_GROUP_ID>"
 
 if ($Action -eq "List") {
@@ -23,7 +23,7 @@ if (-not $UserPrincipalName) {
 
 $UserId = az ad user show --id $UserPrincipalName --query id --output tsv
 if (-not $UserId) {
-    throw "Nie znaleziono użytkownika $UserPrincipalName."
+    throw "Nie znaleziono uzytkownika $UserPrincipalName."
 }
 
 if ($Action -eq "Add") {
@@ -32,5 +32,5 @@ if ($Action -eq "Add") {
 }
 else {
     az ad group member remove --group $GroupId --member-id $UserId
-    Write-Host "Usunięto operatora $UserPrincipalName."
+    Write-Host "Usunieto operatora $UserPrincipalName."
 }

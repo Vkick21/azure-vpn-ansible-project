@@ -30,7 +30,7 @@ if ($Action -eq "Status") {
     exit
 }
 
-# Usuwamy tylko wpis tej aplikacji i nie zmieniamy pozostałych linii hosts.
+# Usuwamy tylko wpis tej aplikacji i nie zmieniamy pozostalych linii hosts.
 $CurrentLines = Get-Content -LiteralPath $HostsPath
 $RemainingLines = $CurrentLines | Where-Object {
     $_ -notmatch [regex]::Escape($Domain)
@@ -38,10 +38,10 @@ $RemainingLines = $CurrentLines | Where-Object {
 
 if ($Action -eq "Add") {
     $RemainingLines += $PrivateIp + [char]9 + $Domain + " # VKICKHAMSTER operator przez VPN"
-    Write-Host "Dodano prywatny dostęp operatora przez VPN."
+    Write-Host "Dodano prywatny dostep operatora przez VPN."
 }
 else {
-    Write-Host "Usunięto prywatne mapowanie. Domena wróci do publicznego adresu."
+    Write-Host "Usunieto prywatne mapowanie. Domena wroci do publicznego adresu."
 }
 
 Set-Content -LiteralPath $HostsPath -Value $RemainingLines -Encoding ascii

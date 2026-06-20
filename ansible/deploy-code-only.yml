@@ -1,5 +1,5 @@
 ---
-- name: Wdróż kod aplikacji bez zmian w bazie
+- name: Wdroz kod aplikacji bez zmian w bazie
   hosts: helpdesk
   become: true
 
@@ -14,7 +14,7 @@
     entra_operator_group_id: <ENTRA_OPERATOR_GROUP_ID>
 
   tasks:
-    # Ta ścieżka służy do zmian interfejsu, które nie wymagają migracji.
+    # Ta sciezka sluzy do zmian interfejsu, ktore nie wymagaja migracji.
     - name: Synchronizuj kod aplikacji
       ansible.posix.synchronize:
         src: ../app/
@@ -32,7 +32,7 @@
           - "--exclude=staticfiles/"
           - "--exclude=media/"
 
-    - name: Zainstaluj zależności aplikacji
+    - name: Zainstaluj zaleznosci aplikacji
       ansible.builtin.pip:
         requirements: "{{ app_code }}/requirements.txt"
         virtualenv: "{{ app_venv }}"
@@ -54,15 +54,15 @@
       register: static_files
       changed_when: "'0 static files copied' not in static_files.stdout"
 
-    # Nginx może przejść do zebranych plików, ale nie dostaje prawa listowania katalogu domowego.
-    - name: Daj Nginx dostęp do katalogu aplikacji
+    # Nginx moze przejsc do zebranych plikow, ale nie dostaje prawa listowania katalogu domowego.
+    - name: Daj Nginx dostep do katalogu aplikacji
       ansible.posix.acl:
         path: /opt/helpdesk
         entity: www-data
         etype: user
         permissions: x
         state: present
-    - name: Przygotuj katalog ustawień usługi
+    - name: Przygotuj katalog ustawien uslugi
       ansible.builtin.file:
         path: /etc/systemd/system/helpdesk.service.d
         state: directory
@@ -70,8 +70,8 @@
         group: root
         mode: "0755"
 
-    # Drop-in dodaje Entra bez przepisywania całej istniejącej usługi.
-    - name: Przygotuj ustawienia Entra dla usługi
+    # Drop-in dodaje Entra bez przepisywania calej istniejacej uslugi.
+    - name: Przygotuj ustawienia Entra dla uslugi
       ansible.builtin.copy:
         dest: /etc/systemd/system/helpdesk.service.d/entra.conf
         owner: root
@@ -82,13 +82,13 @@
           Environment=ENTRA_TENANT_ID={{ entra_tenant_id }}
           Environment=ENTRA_CLIENT_ID={{ entra_client_id }}
           Environment=ENTRA_OPERATOR_GROUP_ID={{ entra_operator_group_id }}
-    - name: Uruchom ponownie aplikację
+    - name: Uruchom ponownie aplikacje
       ansible.builtin.systemd:
         name: helpdesk
         state: restarted
         daemon_reload: true
 
-    - name: Sprawdź aplikację po wdrożeniu
+    - name: Sprawdz aplikacje po wdrozeniu
       ansible.builtin.uri:
         url: http://127.0.0.1:8000/health/
         return_content: true

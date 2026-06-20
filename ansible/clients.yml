@@ -1,4 +1,4 @@
-# Każdy użytkownik jest tworzony tylko na przypisanej maszynie.
+# Kazdy uzytkownik jest tworzony tylko na przypisanej maszynie.
 clients:
   - name: client01
     vm: helpdesk01

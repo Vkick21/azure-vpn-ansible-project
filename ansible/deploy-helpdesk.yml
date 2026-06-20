@@ -1,8 +1,8 @@
 ---
-- name: Upewnij się, że Nginx jest gotowy
+- name: Upewnij sie, ze Nginx jest gotowy
   ansible.builtin.import_playbook: nginx.yml
 
-- name: Wdróż aplikację Django HelpDesk
+- name: Wdroz aplikacje Django HelpDesk
   hosts: helpdesk
   become: true
 
@@ -19,8 +19,8 @@
     entra_operator_group_id: <ENTRA_OPERATOR_GROUP_ID>
 
   tasks:
-    # Aplikacja działa na osobnym koncie bez dostępu do logowania.
-    - name: Utwórz użytkownika aplikacji
+    # Aplikacja dziala na osobnym koncie bez dostepu do logowania.
+    - name: Utworz uzytkownika aplikacji
       ansible.builtin.user:
         name: helpdesk
         system: true
@@ -28,7 +28,7 @@
         home: "{{ app_root }}"
         create_home: true
 
-    - name: Zainstaluj narzędzia Python
+    - name: Zainstaluj narzedzia Python
       ansible.builtin.apt:
         name:
           - python3-venv
@@ -47,7 +47,7 @@
         group: helpdesk
         mode: "0755"
 
-    # Rsync przesyła tylko faktycznie zmienione pliki.
+    # Rsync przesyla tylko faktycznie zmienione pliki.
     - name: Synchronizuj kod HelpDesk
       ansible.posix.synchronize:
         src: ../app/
@@ -65,19 +65,19 @@
           - "--exclude=staticfiles/"
       notify: Uruchom ponownie HelpDesk
 
-    - name: Utwórz środowisko Python
+    - name: Utworz srodowisko Python
       ansible.builtin.command:
         cmd: "python3 -m venv {{ app_venv }}"
         creates: "{{ app_venv }}/bin/python"
 
-    - name: Zainstaluj zależności aplikacji
+    - name: Zainstaluj zaleznosci aplikacji
       ansible.builtin.pip:
         requirements: "{{ app_code }}/requirements.txt"
         virtualenv: "{{ app_venv }}"
       notify: Uruchom ponownie HelpDesk
 
-    # Systemd uruchamia aplikację automatycznie po restarcie VM.
-    - name: Dodaj usługę systemd
+    # Systemd uruchamia aplikacje automatycznie po restarcie VM.
+    - name: Dodaj usluge systemd
       ansible.builtin.copy:
         dest: /etc/systemd/system/helpdesk.service
         owner: root
@@ -114,14 +114,14 @@
           [Install]
           WantedBy=multi-user.target
       notify:
-        - Przeładuj systemd
+        - Przeladuj systemd
         - Uruchom ponownie HelpDesk
 
-    # Kod i zmienne usługi muszą działać przed migracją oraz kolejnymi testami.
-    - name: Zastosuj zmiany aplikacji przed migracją
+    # Kod i zmienne uslugi musza dzialac przed migracja oraz kolejnymi testami.
+    - name: Zastosuj zmiany aplikacji przed migracja
       ansible.builtin.meta: flush_handlers
 
-    # Migrację wspólnej bazy wykonuje tylko pierwszy serwer.
+    # Migracje wspolnej bazy wykonuje tylko pierwszy serwer.
     - name: Wykonaj migracje bazy
       ansible.builtin.command:
         cmd: "{{ app_venv }}/bin/python manage.py migrate --noinput"
@@ -137,7 +137,7 @@
       register: migrations
       changed_when: "'Applying' in migrations.stdout"
 
-    - name: Utwórz pierwsze konto administratora
+    - name: Utworz pierwsze konto administratora
       ansible.builtin.command:
         cmd: "{{ app_venv }}/bin/python manage.py bootstrap_admin"
         chdir: "{{ app_code }}"
@@ -167,14 +167,14 @@
       register: static_files
       changed_when: "'0 static files copied' not in static_files.stdout"
 
-    - name: Sprawdź czy certyfikat HTTPS jest już dostępny
+    - name: Sprawdz czy certyfikat HTTPS jest juz dostepny
       ansible.builtin.stat:
         path: /etc/nginx/ssl/vkickhamster/fullchain.pem
       register: tls_certificate
 
-    # Panel administratora jest dostępny tylko od strony VPN lub Bastiona.
-    # Nginx może przejść do zebranych plików, ale nie dostaje prawa listowania katalogu domowego.
-    - name: Daj Nginx dostęp do katalogu aplikacji
+    # Panel administratora jest dostepny tylko od strony VPN lub Bastiona.
+    # Nginx moze przejsc do zebranych plikow, ale nie dostaje prawa listowania katalogu domowego.
+    - name: Daj Nginx dostep do katalogu aplikacji
       ansible.posix.acl:
         path: /opt/helpdesk
         entity: www-data
@@ -214,20 +214,20 @@
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
               }
           }
-      notify: Przeładuj Nginx
+      notify: Przeladuj Nginx
       when: not tls_certificate.stat.exists
 
-    - name: Uruchom usługę HelpDesk
+    - name: Uruchom usluge HelpDesk
       ansible.builtin.systemd:
         name: helpdesk
         state: started
         enabled: true
         daemon_reload: true
 
-    - name: Zastosuj zmiany usług
+    - name: Zastosuj zmiany uslug
       ansible.builtin.meta: flush_handlers
 
-    - name: Sprawdź lokalny endpoint zdrowia
+    - name: Sprawdz lokalny endpoint zdrowia
       ansible.builtin.uri:
         url: http://127.0.0.1:8000/health/
         status_code: 200
@@ -237,7 +237,7 @@
       until: health_check.status == 200
 
   handlers:
-    - name: Przeładuj systemd
+    - name: Przeladuj systemd
       ansible.builtin.systemd:
         daemon_reload: true
 
@@ -246,11 +246,11 @@
         name: helpdesk
         state: restarted
 
-    - name: Przeładuj Nginx
+    - name: Przeladuj Nginx
       ansible.builtin.service:
         name: nginx
         state: reloaded
 
-# HTTPS jest nakładany po wdrożeniu aplikacji, gdy certyfikat jest już dostępny.
+# HTTPS jest nakladany po wdrozeniu aplikacji, gdy certyfikat jest juz dostepny.
 - name: Utrzymaj HTTPS dla VKICKHAMSTER
   ansible.builtin.import_playbook: https.yml

@@ -1,11 +1,11 @@
 ---
-- name: Sprawdź publiczny dostęp do HelpDesk
+- name: Sprawdz publiczny dostep do HelpDesk
   hosts: localhost
   connection: local
   gather_facts: false
 
   tasks:
-    - name: Sprawdź health probe przez Load Balancer
+    - name: Sprawdz health probe przez Load Balancer
       ansible.builtin.uri:
         url: https://helpdesk-demo.example.com/health/
         return_content: true
@@ -13,28 +13,28 @@
       register: public_health
       failed_when: public_health.json.database != "available"
 
-    - name: Potwierdź blokadę publicznego panelu administratora
+    - name: Potwierdz blokade publicznego panelu administratora
       ansible.builtin.uri:
         url: https://helpdesk-demo.example.com/admin/
         status_code: 403
 
-    - name: Potwierdź przekierowanie HTTP do HTTPS
+    - name: Potwierdz przekierowanie HTTP do HTTPS
       ansible.builtin.uri:
         url: http://helpdesk-demo.example.com/
         follow_redirects: none
         status_code: 301
 
-- name: Sprawdź oba backendy aplikacji
+- name: Sprawdz oba backendy aplikacji
   hosts: helpdesk
   become: true
 
   tasks:
-    - name: Sprawdź usługę HelpDesk
+    - name: Sprawdz usluge HelpDesk
       ansible.builtin.command:
         cmd: systemctl is-active helpdesk
       changed_when: false
 
-    - name: Sprawdź lokalne połączenie z bazą
+    - name: Sprawdz lokalne polaczenie z baza
       ansible.builtin.uri:
         url: http://127.0.0.1:8000/health/
         return_content: true
@@ -42,16 +42,16 @@
       register: backend_health
       failed_when: backend_health.json.database != "available"
 
-    - name: Sprawdź certyfikat na serwerze
+    - name: Sprawdz certyfikat na serwerze
       ansible.builtin.command:
         cmd: openssl x509 -in /etc/nginx/ssl/vkickhamster/fullchain.pem -noout -checkend 2592000
       changed_when: false
 
-    - name: Sprawdź timer synchronizacji certyfikatu
+    - name: Sprawdz timer synchronizacji certyfikatu
       ansible.builtin.command:
         cmd: systemctl is-active helpdesk-certificate-sync.timer
       changed_when: false
-    - name: Sprawdź plik załącznika w Azure Storage
+    - name: Sprawdz plik zalacznika w Azure Storage
       ansible.builtin.command:
         argv:
           - /opt/helpdesk/venv/bin/python
@@ -75,20 +75,20 @@
       changed_when: false
       run_once: true
 
-    - name: Potwierdź obecność załącznika
+    - name: Potwierdz obecnosc zalacznika
       ansible.builtin.assert:
         that:
           - attachment_exists.stdout_lines | last == "True"
-        fail_msg: "Załącznik nie został znaleziony w Azure Storage."
-        success_msg: "Załącznik istnieje w prywatnym kontenerze Azure Storage."
+        fail_msg: "Zalacznik nie zostal znaleziony w Azure Storage."
+        success_msg: "Zalacznik istnieje w prywatnym kontenerze Azure Storage."
       run_once: true
 
-- name: Sprawdź dane zapisane w PostgreSQL
+- name: Sprawdz dane zapisane w PostgreSQL
   hosts: database
   become: true
 
   tasks:
-    - name: Policz zgłoszenia HelpDesk
+    - name: Policz zgloszenia HelpDesk
       ansible.builtin.command:
         argv:
           - runuser
@@ -103,13 +103,13 @@
       register: ticket_count
       changed_when: false
 
-    - name: Potwierdź zapis co najmniej jednego zgłoszenia
+    - name: Potwierdz zapis co najmniej jednego zgloszenia
       ansible.builtin.assert:
         that:
           - ticket_count.stdout | trim | int >= 1
-        fail_msg: "W bazie nie znaleziono testowego zgłoszenia."
-        success_msg: "Zgłoszenia są poprawnie zapisane w PostgreSQL."
-    - name: Sprawdź aktywny timer backupu
+        fail_msg: "W bazie nie znaleziono testowego zgloszenia."
+        success_msg: "Zgloszenia sa poprawnie zapisane w PostgreSQL."
+    - name: Sprawdz aktywny timer backupu
       ansible.builtin.command:
         cmd: systemctl is-active helpdesk-backup.timer
       changed_when: false
@@ -130,7 +130,7 @@
       register: backup_count
       changed_when: false
 
-    - name: Potwierdź obecność backupu
+    - name: Potwierdz obecnosc backupu
       ansible.builtin.assert:
         that:
           - backup_count.stdout | trim | int >= 1

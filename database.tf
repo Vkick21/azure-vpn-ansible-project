@@ -1,4 +1,4 @@
-# Baza działa w osobnej podsieci i nie ma publicznego adresu IP.
+# Baza dziala w osobnej podsieci i nie ma publicznego adresu IP.
 resource "azurerm_subnet" "database" {
   name                 = "subnet-database"
   resource_group_name  = azurerm_resource_group.main.name
@@ -6,7 +6,7 @@ resource "azurerm_subnet" "database" {
   address_prefixes     = ["10.10.5.0/24"]
 }
 
-# Do PostgreSQL mogą dotrzeć tylko serwery aplikacji.
+# Do PostgreSQL moga dotrzec tylko serwery aplikacji.
 resource "azurerm_network_security_group" "database" {
   name                = "nsg-database"
   location            = azurerm_resource_group.main.location
@@ -48,7 +48,7 @@ resource "azurerm_network_security_group" "database" {
     destination_address_prefix = "*"
   }
 
-  # Pozostały ruch z VNetu nie powinien docierać do bazy.
+  # Pozostaly ruch z VNetu nie powinien docierac do bazy.
   security_rule {
     name                       = "DenyOtherVnetInbound"
     priority                   = 4096
@@ -80,7 +80,7 @@ resource "azurerm_network_interface_security_group_association" "database" {
   network_security_group_id = azurerm_network_security_group.database.id
 }
 
-# Mały rozmiar B1s ogranicza koszt środowiska demonstracyjnego.
+# Maly rozmiar B1s ogranicza koszt srodowiska demonstracyjnego.
 resource "azurerm_linux_virtual_machine" "database" {
   name                = "helpdesk-db01"
   resource_group_name = azurerm_resource_group.main.name

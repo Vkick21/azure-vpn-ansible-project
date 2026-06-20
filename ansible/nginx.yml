@@ -4,8 +4,8 @@
   become: true
 
   tasks:
-    # Cache pakietów jest odświeżany najwyżej raz na godzinę.
-    - name: Odśwież listę pakietów
+    # Cache pakietow jest odswiezany najwyzej raz na godzine.
+    - name: Odswiez liste pakietow
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600

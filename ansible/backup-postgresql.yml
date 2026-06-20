@@ -8,8 +8,8 @@
     storage_account_name: examplestorageaccount
 
   tasks:
-    # Osobne środowisko Python nie miesza zależności z systemem.
-    - name: Zainstaluj narzędzia backupu
+    # Osobne srodowisko Python nie miesza zaleznosci z systemem.
+    - name: Zainstaluj narzedzia backupu
       ansible.builtin.apt:
         name:
           - python3-venv
@@ -25,7 +25,7 @@
         group: root
         mode: "0750"
 
-    - name: Utwórz środowisko Python backupu
+    - name: Utworz srodowisko Python backupu
       ansible.builtin.command:
         cmd: "python3 -m venv {{ backup_root }}/venv"
         creates: "{{ backup_root }}/venv/bin/python"
@@ -37,7 +37,7 @@
           - azure-storage-blob==12.30.0
         virtualenv: "{{ backup_root }}/venv"
 
-    # Skrypt usuwa lokalny plik po wysłaniu i trzyma 14 dni kopii.
+    # Skrypt usuwa lokalny plik po wyslaniu i trzyma 14 dni kopii.
     - name: Dodaj skrypt backupu
       ansible.builtin.copy:
         dest: "{{ backup_root }}/backup.py"
@@ -83,7 +83,7 @@
           finally:
               backup.unlink(missing_ok=True)
 
-    - name: Dodaj usługę backupu
+    - name: Dodaj usluge backupu
       ansible.builtin.copy:
         dest: /etc/systemd/system/helpdesk-backup.service
         owner: root
@@ -119,7 +119,7 @@
           [Install]
           WantedBy=timers.target
 
-    - name: Włącz harmonogram backupu
+    - name: Wlacz harmonogram backupu
       ansible.builtin.systemd:
         name: helpdesk-backup.timer
         state: started

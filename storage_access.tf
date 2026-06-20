@@ -1,4 +1,4 @@
-# Managed Identity pozwala korzystać ze Storage bez kluczy dostępowych.
+# Managed Identity pozwala korzystac ze Storage bez kluczy dostepowych.
 locals {
   storage_blob_principals = {
     helpdesk01    = azurerm_linux_virtual_machine.helpdesk01.identity[0].principal_id

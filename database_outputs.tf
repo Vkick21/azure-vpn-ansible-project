@@ -1,4 +1,4 @@
-# Dane potrzebne później przez Ansible i aplikację.
+# Dane potrzebne pozniej przez Ansible i aplikacje.
 output "database_private_ip" {
   value = azurerm_network_interface.database.private_ip_address
 }

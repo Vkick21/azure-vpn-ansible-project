@@ -8,10 +8,10 @@ param(
 
 Set-StrictMode -Version Latest
 
-# Skrypt działa zawsze względem katalogu projektu.
+# Skrypt dziala zawsze wzgledem katalogu projektu.
 Set-Location $PSScriptRoot
 
-# Baza uruchamia się przed aplikacją i zatrzymuje jako ostatnia.
+# Baza uruchamia sie przed aplikacja i zatrzymuje jako ostatnia.
 $AppVmNames = @("helpdesk01", "helpdesk02")
 $DatabaseVmName = "helpdesk-db01"
 
@@ -28,7 +28,7 @@ switch ($Action)
     }
 
     "stop" {
-        # Najpierw zatrzymujemy aplikację, żeby nie zerwała połączeń do bazy.
+        # Najpierw zatrzymujemy aplikacje, zeby nie zerwala polaczen do bazy.
         Write-Host "Stopping application servers..."
         foreach ($VmName in $AppVmNames) {
             az vm deallocate --resource-group $ResourceGroup --name $VmName
@@ -40,7 +40,7 @@ switch ($Action)
     }
 
     "restart" {
-        # Kolejność restartu zachowuje dostępność bazy dla aplikacji.
+        # Kolejnosc restartu zachowuje dostepnosc bazy dla aplikacji.
         Write-Host "Restarting database..."
         az vm restart --resource-group $ResourceGroup --name $DatabaseVmName
 
@@ -60,7 +60,7 @@ switch ($Action)
     }
 
     "plan" {
-        # Plan tylko pokazuje zmiany i niczego nie wdraża.
+        # Plan tylko pokazuje zmiany i niczego nie wdraza.
         terraform plan
     }
 }

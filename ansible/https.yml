@@ -1,5 +1,5 @@
 ---
-- name: Włącz HTTPS dla VKICKHAMSTER Helpdesk
+- name: Wlacz HTTPS dla VKICKHAMSTER Helpdesk
   hosts: helpdesk
   become: true
 
@@ -19,8 +19,8 @@
         group: root
         mode: "0750"
 
-    # Skrypt używa Managed Identity, więc w plikach nie ma kluczy do Azure.
-    - name: Dodaj skrypt obsługujący token i certyfikat
+    # Skrypt uzywa Managed Identity, wiec w plikach nie ma kluczy do Azure.
+    - name: Dodaj skrypt obslugujacy token i certyfikat
       ansible.builtin.copy:
         dest: "{{ certificate_helper }}"
         owner: root
@@ -100,13 +100,13 @@
           else:
               raise SystemExit(f"Nieznana akcja: {action}")
 
-    - name: Sprawdź czy lokalny certyfikat już istnieje
+    - name: Sprawdz czy lokalny certyfikat juz istnieje
       ansible.builtin.stat:
         path: "{{ certificate_root }}/fullchain.pem"
       register: local_certificate
 
-    # Na tym etapie Nginx udostępnia token ACME, ale jeszcze nie wymaga certyfikatu.
-    - name: Przygotuj weryfikację certyfikatu przez HTTP
+    # Na tym etapie Nginx udostepnia token ACME, ale jeszcze nie wymaga certyfikatu.
+    - name: Przygotuj weryfikacje certyfikatu przez HTTP
       ansible.builtin.copy:
         dest: /etc/nginx/sites-available/default
         owner: root
@@ -145,13 +145,13 @@
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
               }
           }
-      notify: Przeładuj Nginx
+      notify: Przeladuj Nginx
       when: not local_certificate.stat.exists
 
-    - name: Zastosuj konfigurację potrzebną do wydania certyfikatu
+    - name: Zastosuj konfiguracje potrzebna do wydania certyfikatu
       ansible.builtin.meta: flush_handlers
 
-    - name: Zainstaluj Certbot na serwerze odnawiającym
+    - name: Zainstaluj Certbot na serwerze odnawiajacym
       ansible.builtin.apt:
         name: certbot
         state: present
@@ -159,8 +159,8 @@
         cache_valid_time: 3600
       when: inventory_hostname == groups['helpdesk'][0]
 
-    # Pierwszy serwer odnawia certyfikat, a oba pobierają tę samą kopię ze Storage.
-    - name: Pobierz lub odnów certyfikat Let's Encrypt
+    # Pierwszy serwer odnawia certyfikat, a oba pobieraja te sama kopie ze Storage.
+    - name: Pobierz lub odnow certyfikat Let's Encrypt
       ansible.builtin.command:
         argv:
           - certbot
@@ -184,7 +184,7 @@
       register: certbot_result
       changed_when: "'Successfully received certificate' in certbot_result.stdout"
 
-    - name: Umieść aktualny certyfikat w prywatnym Storage
+    - name: Umiesc aktualny certyfikat w prywatnym Storage
       ansible.builtin.command:
         argv:
           - "{{ python_path }}"
@@ -195,7 +195,7 @@
       when: inventory_hostname == groups['helpdesk'][0]
       changed_when: false
 
-    - name: Pobierz certyfikat na każdy serwer
+    - name: Pobierz certyfikat na kazdy serwer
       ansible.builtin.command:
         argv:
           - "{{ python_path }}"
@@ -203,8 +203,8 @@
           - sync
       changed_when: false
 
-    # Health po HTTP pozostaje dla Load Balancera, a ruch użytkowników przechodzi na HTTPS.
-    - name: Dodaj reguły dostępu tylko przez VPN
+    # Health po HTTP pozostaje dla Load Balancera, a ruch uzytkownikow przechodzi na HTTPS.
+    - name: Dodaj reguly dostepu tylko przez VPN
       ansible.builtin.copy:
         dest: /etc/nginx/snippets/vkickhamster-vpn-only.conf
         owner: root
@@ -215,7 +215,7 @@
           allow 10.10.4.0/26;
           allow 127.0.0.1;
           deny all;
-    - name: Włącz HTTPS i przekierowanie ruchu
+    - name: Wlacz HTTPS i przekierowanie ruchu
       ansible.builtin.copy:
         dest: /etc/nginx/sites-available/default
         owner: root
@@ -248,7 +248,7 @@
                   include /etc/nginx/snippets/vkickhamster-vpn-only.conf;
                   return 301 https://{{ helpdesk_domain }}$request_uri;
               }
-              # Panel po prywatnym IP nadal działa dla administratora po VPN.
+              # Panel po prywatnym IP nadal dziala dla administratora po VPN.
               location /admin/ {
                   allow 172.20.200.0/24;
                   allow 10.10.4.0/26;
@@ -283,7 +283,7 @@
                   alias /opt/helpdesk/app/staticfiles/;
               }
 
-              # Panel operatora i callback Entra są dostępne tylko z VPN.
+              # Panel operatora i callback Entra sa dostepne tylko z VPN.
               location ^~ /operator/ {
                   include /etc/nginx/snippets/vkickhamster-vpn-only.conf;
                   proxy_pass http://127.0.0.1:8000;
@@ -320,9 +320,9 @@
                   proxy_set_header X-Forwarded-Proto https;
               }
           }
-      notify: Przeładuj Nginx
+      notify: Przeladuj Nginx
 
-    - name: Dodaj usługę synchronizacji certyfikatu
+    - name: Dodaj usluge synchronizacji certyfikatu
       ansible.builtin.copy:
         dest: /etc/systemd/system/helpdesk-certificate-sync.service
         owner: root
@@ -365,11 +365,11 @@
         enabled: true
         daemon_reload: true
 
-    - name: Zastosuj końcową konfigurację Nginx
+    - name: Zastosuj koncowa konfiguracje Nginx
       ansible.builtin.meta: flush_handlers
 
   handlers:
-    - name: Przeładuj Nginx
+    - name: Przeladuj Nginx
       ansible.builtin.shell:
         cmd: nginx -t && systemctl reload nginx
       changed_when: true

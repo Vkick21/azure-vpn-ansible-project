@@ -1,10 +1,10 @@
-# Główna grupa przechowuje wszystkie zasoby środowiska HelpDesk.
+# Glowna grupa przechowuje wszystkie zasoby srodowiska HelpDesk.
 resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name
   location = var.location
 }
 
-# Wspólna sieć prywatna dla aplikacji, administracji i VPN.
+# Wspolna siec prywatna dla aplikacji, administracji i VPN.
 resource "azurerm_virtual_network" "main" {
   name                = "vnet-helpdesk"
   address_space       = ["10.10.0.0/16"]
@@ -12,7 +12,7 @@ resource "azurerm_virtual_network" "main" {
   resource_group_name = azurerm_resource_group.main.name
 }
 
-# Podsieć aplikacji przeznaczona dla serwerów HelpDesk.
+# Podsiec aplikacji przeznaczona dla serwerow HelpDesk.
 resource "azurerm_subnet" "app" {
   name                 = "subnet-app"
   resource_group_name  = azurerm_resource_group.main.name
@@ -83,7 +83,7 @@ resource "azurerm_linux_virtual_machine" "helpdesk01" {
   }
 }
 
-# Reguły sieciowe dopuszczają SSH i ruch HTTP do serwerów.
+# Reguly sieciowe dopuszczaja SSH i ruch HTTP do serwerow.
 resource "azurerm_network_security_group" "app" {
   name                = "nsg-app"
   location            = azurerm_resource_group.main.location
@@ -112,7 +112,7 @@ resource "azurerm_network_security_group" "app" {
     destination_address_prefix = "*"
   }
 
-  # HTTPS udostępnia formularz bez wysyłania danych otwartym tekstem.
+  # HTTPS udostepnia formularz bez wysylania danych otwartym tekstem.
   security_rule {
     name                       = "AllowHTTPS"
     priority                   = 1020
@@ -131,7 +131,7 @@ resource "azurerm_network_interface_security_group_association" "helpdesk01" {
   network_security_group_id = azurerm_network_security_group.app.id
 }
 
-# Dedykowana podsieć wymagana przez Azure Bastion.
+# Dedykowana podsiec wymagana przez Azure Bastion.
 resource "azurerm_subnet" "bastion" {
   name                 = "AzureBastionSubnet"
   resource_group_name  = azurerm_resource_group.main.name
@@ -194,7 +194,7 @@ resource "azurerm_network_interface_security_group_association" "helpdesk02" {
   network_security_group_id = azurerm_network_security_group.app.id
 }
 
-# Publiczny Load Balancer rozdziela ruch HTTP między obie VM.
+# Publiczny Load Balancer rozdziela ruch HTTP miedzy obie VM.
 resource "azurerm_public_ip" "lb" {
   name                = "pip-helpdesk-lb"
   location            = azurerm_resource_group.main.location
@@ -203,7 +203,7 @@ resource "azurerm_public_ip" "lb" {
   allocation_method = "Static"
   sku               = "Standard"
 
-  # Bezpłatna nazwa Azure dla publicznego HelpDesk.
+  # Bezplatna nazwa Azure dla publicznego HelpDesk.
   domain_name_label = "vkickhamster-helpdesk"
 }
 
@@ -220,7 +220,7 @@ resource "azurerm_lb" "helpdesk" {
 
 }
 
-# Osobny wewnętrzny Load Balancer utrzymuje panel wyłącznie w sieci prywatnej.
+# Osobny wewnetrzny Load Balancer utrzymuje panel wylacznie w sieci prywatnej.
 resource "azurerm_lb" "operator" {
   name                = "lb-helpdesk-operator"
   location            = azurerm_resource_group.main.location
@@ -299,7 +299,7 @@ resource "azurerm_lb_rule" "http" {
   probe_id = azurerm_lb_probe.http.id
 }
 
-# HTTPS korzysta z tych samych serwerów i tego samego publicznego adresu IP.
+# HTTPS korzysta z tych samych serwerow i tego samego publicznego adresu IP.
 resource "azurerm_lb_rule" "https" {
   loadbalancer_id                = azurerm_lb.helpdesk.id
   name                           = "https-rule"
@@ -316,7 +316,7 @@ resource "azurerm_lb_rule" "https" {
 }
 
 
-# Prywatne reguły zachowują wysoką dostępność panelu przez oba backendy.
+# Prywatne reguly zachowuja wysoka dostepnosc panelu przez oba backendy.
 resource "azurerm_lb_rule" "internal_http" {
   loadbalancer_id                = azurerm_lb.operator.id
   name                           = "internal-http-rule"
@@ -349,7 +349,7 @@ resource "azurerm_lb_rule" "internal_https" {
   probe_id = azurerm_lb_probe.operator_http.id
 }
 
-# Bastion zapewnia awaryjny dostęp administracyjny bez IP na VM.
+# Bastion zapewnia awaryjny dostep administracyjny bez IP na VM.
 resource "azurerm_public_ip" "bastion" {
   count = var.enable_bastion ? 1 : 0
 
@@ -374,7 +374,7 @@ resource "azurerm_bastion_host" "main" {
   }
 }
 
-# Brama User-to-Site pozwala zarządzać VM z lokalnego komputera.
+# Brama User-to-Site pozwala zarzadzac VM z lokalnego komputera.
 resource "azurerm_public_ip" "vpn" {
   count = var.enable_vpn ? 1 : 0
 
@@ -425,7 +425,7 @@ resource "azurerm_virtual_network_gateway" "vpn" {
   }
 }
 
-# Storage przechowuje załączniki, dokumentację i kopie zapasowe.
+# Storage przechowuje zalaczniki, dokumentacje i kopie zapasowe.
 resource "azurerm_storage_account" "helpdesk" {
   name                = "helpdesk${random_string.storage.result}"
   resource_group_name = azurerm_resource_group.main.name
@@ -459,14 +459,14 @@ resource "azurerm_storage_container" "backups" {
   container_access_type = "private"
 }
 
-# Publiczny kontener przechowuje tylko krótkotrwałe tokeny potwierdzające domenę dla certyfikatu.
+# Publiczny kontener przechowuje tylko krotkotrwale tokeny potwierdzajace domene dla certyfikatu.
 resource "azurerm_storage_container" "acme" {
   name                  = "acme"
   storage_account_id    = azurerm_storage_account.helpdesk.id
   container_access_type = "blob"
 }
 
-# Certyfikat jest prywatny i dostępny tylko dla tożsamości serwerów.
+# Certyfikat jest prywatny i dostepny tylko dla tozsamosci serwerow.
 resource "azurerm_storage_container" "certificates" {
   name                  = "certificates"
   storage_account_id    = azurerm_storage_account.helpdesk.id
@@ -474,7 +474,7 @@ resource "azurerm_storage_container" "certificates" {
 }
 
 
-# Monitoring zbiera metryki i logi z serwerów Linux.
+# Monitoring zbiera metryki i logi z serwerow Linux.
 resource "azurerm_log_analytics_workspace" "main" {
   name                = "law-helpdesk-prod"
   location            = azurerm_resource_group.main.location

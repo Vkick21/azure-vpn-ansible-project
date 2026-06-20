@@ -1,12 +1,12 @@
 
 
 variable "location" {
-  description = "Region Azure dla zasobów projektu"
+  description = "Region Azure dla zasobow projektu"
   default     = "westeurope"
 }
 
 variable "resource_group_name" {
-  description = "Nazwa głównej grupy zasobów"
+  description = "Nazwa glownej grupy zasobow"
   default     = "rg-helpdesk-prod"
 }
 
@@ -16,7 +16,7 @@ variable "admin_username" {
 }
 
 variable "ssh_public_key_path" {
-  description = "Lokalna ścieżka do publicznego klucza SSH"
+  description = "Lokalna sciezka do publicznego klucza SSH"
   default     = "C:/Users/janek/.ssh/id_ed25519.pub"
 }
 
@@ -39,7 +39,7 @@ variable "mode" {
 }
 
 variable "env_mode" {
-  description = "Tryb pracy środowiska używany przez locals"
+  description = "Tryb pracy srodowiska uzywany przez locals"
   type        = string
   default     = "full"
 }
