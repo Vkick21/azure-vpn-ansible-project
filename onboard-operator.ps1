@@ -81,7 +81,8 @@ $cerPath = Join-Path $packageDirectory "VKICKHAMSTER-$safeOperatorName.cer"
 Export-PfxCertificate `
     -Cert "Cert:\CurrentUser\My\$($clientCertificate.Thumbprint)" `
     -FilePath $pfxPath `
-    -Password $PfxPassword | Out-Null
+    -Password $PfxPassword `
+    -ChainOption EndEntityCertOnly | Out-Null
 Export-Certificate `
     -Cert "Cert:\CurrentUser\My\$($clientCertificate.Thumbprint)" `
     -FilePath $cerPath | Out-Null
@@ -146,20 +147,22 @@ VKICKHAMSTER Helpdesk - pakiet operatora
 
 Operator: $UserPrincipalName
 
-1. Zainstaluj plik PFX w magazynie certyfikatow Biezacy uzytkownik.
+1. Zainstaluj plik PFX w magazynie Biezacy uzytkownik, Osobisty.
 2. Haslo PFX odbierz osobnym, bezpiecznym kanalem.
 3. W Azure VPN Client zaimportuj plik azurevpnconfig.xml z katalogu
    vpn-client-profile\AzureVPN.
-4. Polacz profil vnet-helpdesk.
-5. Uruchom PowerShell jako administrator i wykonaj:
+4. Zamknij i ponownie uruchom Azure VPN Client, aby odswiezyc liste
+   certyfikatow klienta.
+5. Polacz profil vnet-helpdesk.
+6. Uruchom PowerShell jako administrator i wykonaj:
 
    . .\operator-config.ps1
    .\operator-vpn-access.ps1 -Action Add
 
-6. Otworz panel:
+7. Otworz panel:
    https://$($env:HELPDESK_FQDN)/operator/
 
-7. Zaloguj sie kontem: $UserPrincipalName
+8. Zaloguj sie kontem: $UserPrincipalName
 
 Po zakonczeniu pracy:
 
