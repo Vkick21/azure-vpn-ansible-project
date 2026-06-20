@@ -87,7 +87,7 @@ Azure VPN Gateway udostępnia połączenie Point-to-Site z uwierzytelnianiem cer
 
 Publiczny DNS wskazuje publiczny Load Balancer. Komputer operatora po zestawieniu VPN mapuje tę samą nazwę na prywatny adres `10.10.1.10`. Pozwala to zachować prawidłową nazwę certyfikatu HTTPS i URI callbacku Entra ID.
 
-Onboarding operatora łączy dwie warstwy dostępu. Ansible dodaje konto do grupy Microsoft Entra ID, natomiast skrypt `onboard-operator.ps1` wystawia indywidualny certyfikat klienta podpisany przez `AzureVPNRootCert` i pobiera aktualny profil Azure VPN Client. Utworzony pakiet PFX jest chroniony hasłem i pozostaje poza repozytorium.
+Ansible automatyzuje dodanie konta do grupy operatorów Microsoft Entra ID. Dostęp sieciowy do panelu wymaga wcześniej przygotowanego hosta operatora z zainstalowanym profilem Azure VPN Client oraz certyfikatem klienta. Podczas prezentacji połączenie VPN jest zestawiane z takiego zdalnego hosta.
 
 Nginx dodatkowo blokuje publiczny dostęp do `/operator/`, `/oidc/` i `/admin/`. Samo poznanie adresu panelu nie wystarcza do jego otwarcia.
 
@@ -131,7 +131,6 @@ Najważniejsze zasady automatyzacji:
 - kod aplikacji może zostać wdrożony bez migracji bazy;
 - playbooki są idempotentne;
 - sekrety nie są przechowywane w repozytorium;
-- pakiety VPN operatorów są generowane lokalnie i ignorowane przez Git;
 - komentarze w plikach konfiguracji opisują cel najważniejszych elementów.
 
 ## 11. Testy odbiorcze

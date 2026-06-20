@@ -20,8 +20,7 @@ Najwazniejsze katalogi i pliki:
    Sterowanie srodowiskiem, dostep operatora przez VPN, raport kosztow
    interaktywny przewodnik presentation-demo.ps1 oraz prosty skrypt
    add-operator-ansible.ps1 dodajacy operatora przez Ansible w WSL.
-   Skrypt onboard-operator.ps1 przygotowuje dodatkowo indywidualny
-   certyfikat i pakiet konfiguracji Azure VPN Client.
+   Polaczenie VPN jest demonstrowane z przygotowanego zdalnego hosta.
 
 5. docs/
    Opis projektu, bezpieczenstwa sieci, kosztow, Entra ID i wynikow testow.

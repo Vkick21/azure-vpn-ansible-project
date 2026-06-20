@@ -30,7 +30,6 @@ test.sqlite3
 media/
 staticfiles/
 app/media/
-operator-packages/
 
 # Ansible and editor cache
 .ansible/

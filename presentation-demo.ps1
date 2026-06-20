@@ -58,6 +58,7 @@ $OperatorUrl = "https://$($env:HELPDESK_FQDN)/operator/"
 
 Write-DemoHeader "VKICKHAMSTER Helpdesk - scenariusz prezentacji"
 Write-Host "Skrypt jest przewodnikiem i nie wykonuje terraform apply." -ForegroundColor Magenta
+Write-Host "Zdalny host operatora musi miec wczesniej profil i certyfikat VPN." -ForegroundColor Magenta
 Write-Host "Publiczny formularz: $PublicUrl"
 Write-Host "Panel operatora:     $OperatorUrl"
 
@@ -97,8 +98,8 @@ Write-DemoStep `
 
 Write-DemoStep `
     -Number 4 `
-    -Title "Polaczenie VPN" `
-    -Explanation "Polacz profil vnet-helpdesk w Azure VPN Client. Dopiero VPN daje trase do prywatnego Load Balancera." `
+    -Title "Zdalny host operatora i polaczenie VPN" `
+    -Explanation "Na przygotowanym zdalnym hoscie polacz profil vnet-helpdesk. Host ma juz zainstalowany certyfikat i profil VPN." `
     -Commands @(
         "Test-NetConnection 10.10.1.10 -Port 443",
         ".\operator-vpn-access.ps1 -Action Add",
@@ -112,7 +113,7 @@ Write-DemoStep `
     -Explanation "Operator musi nalezec do grupy Entra ID i zalogowac sie przez prywatny panel po VPN." `
     -Commands @(
         ".\entra-operators.ps1 -Action List",
-        '.\onboard-operator.ps1 -UserPrincipalName "user@example.com"',
+        '.\add-operator-ansible.ps1 -UserPrincipalName "user@example.com"',
         "Otworz $OperatorUrl"
     ) `
     -Expected "Po logowaniu widoczny jest panel i czytelna nazwa operatora."

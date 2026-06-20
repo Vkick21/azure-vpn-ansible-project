@@ -97,14 +97,9 @@ Dodanie operatora przez Ansible uruchamiane z PowerShell:
 .\add-operator-ansible.ps1 -UserPrincipalName "user@example.com"
 ```
 
-Pelny onboarding operatora z indywidualnym certyfikatem i profilem VPN:
-
-```powershell
-.\onboard-operator.ps1 -UserPrincipalName "user@example.com"
-```
-
-Pakiet PFX jest tworzony lokalnie w ignorowanym katalogu
-`operator-packages/`. Haslo PFX nalezy przekazac osobnym kanalem.
+Skrypt dodaje konto do grupy operatorow Entra ID. Dostep VPN jest
+prezentowany z przygotowanego hosta, na ktorym profil i certyfikat klienta
+zostaly zainstalowane przed prezentacja.
 
 Walidacja i plan Terraform:
 

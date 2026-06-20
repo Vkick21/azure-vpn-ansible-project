@@ -56,14 +56,9 @@ ansible-playbook manage-operator.yml -e operator_action=remove -e operator_upn=u
 
 Playbook jest idempotentny: nie dodaje ponownie istniejacego czlonka i nie probuje usunac osoby, ktora nie nalezy do grupy.
 
-## Pelny onboarding operatora
+## Host operatora
 
-Ponizszy skrypt dodaje konto do grupy Entra przez Ansible, wystawia
-indywidualny certyfikat klienta i pobiera aktualny profil Azure VPN Client:
-
-```powershell
-.\onboard-operator.ps1 -UserPrincipalName "user@example.com"
-```
-
-Pakiet jest zapisywany w ignorowanym katalogu `operator-packages/`.
-Haslo PFX nie jest zapisywane i musi zostac przekazane osobnym kanalem.
+Skrypt `add-operator-ansible.ps1` dodaje konto do grupy Entra ID. Profil
+Azure VPN Client oraz certyfikat klienta sa przygotowywane na zdalnym hoscie
+przed prezentacja. Pozwala to pokazac rozdzielenie dostepu sieciowego VPN od
+uwierzytelnienia operatora w aplikacji.
