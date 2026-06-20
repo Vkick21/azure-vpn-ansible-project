@@ -282,3 +282,37 @@ td small {
     grid-template-columns: 1fr;
   }
 }
+
+.button-primary {
+  display: inline-block;
+  border-radius: 8px;
+  padding: 12px 18px;
+  background: #1769e0;
+  color: white;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.login-microsoft {
+  box-sizing: border-box;
+  width: 100%;
+  text-align: center;
+}
+
+.login-separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.login-separator::before,
+.login-separator::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #dbe3ea;
+}

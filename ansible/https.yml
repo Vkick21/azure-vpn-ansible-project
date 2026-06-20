@@ -204,6 +204,17 @@
       changed_when: false
 
     # Health po HTTP pozostaje dla Load Balancera, a ruch użytkowników przechodzi na HTTPS.
+    - name: Dodaj reguły dostępu tylko przez VPN
+      ansible.builtin.copy:
+        dest: /etc/nginx/snippets/vkickhamster-vpn-only.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          allow 172.20.200.0/24;
+          allow 10.10.4.0/26;
+          allow 127.0.0.1;
+          deny all;
     - name: Włącz HTTPS i przekierowanie ruchu
       ansible.builtin.copy:
         dest: /etc/nginx/sites-available/default
@@ -227,6 +238,16 @@
                   proxy_ssl_server_name on;
               }
 
+              # Logowanie operatora po HTTP wymaga VPN i przechodzi na HTTPS.
+              location ^~ /operator/ {
+                  include /etc/nginx/snippets/vkickhamster-vpn-only.conf;
+                  return 301 https://{{ helpdesk_domain }}$request_uri;
+              }
+
+              location ^~ /oidc/ {
+                  include /etc/nginx/snippets/vkickhamster-vpn-only.conf;
+                  return 301 https://{{ helpdesk_domain }}$request_uri;
+              }
               # Panel po prywatnym IP nadal działa dla administratora po VPN.
               location /admin/ {
                   allow 172.20.200.0/24;
@@ -262,6 +283,24 @@
                   alias /opt/helpdesk/app/staticfiles/;
               }
 
+              # Panel operatora i callback Entra są dostępne tylko z VPN.
+              location ^~ /operator/ {
+                  include /etc/nginx/snippets/vkickhamster-vpn-only.conf;
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto https;
+              }
+
+              location ^~ /oidc/ {
+                  include /etc/nginx/snippets/vkickhamster-vpn-only.conf;
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto https;
+              }
               location /admin/ {
                   allow 172.20.200.0/24;
                   allow 10.10.4.0/26;

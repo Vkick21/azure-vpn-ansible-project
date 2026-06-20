@@ -4,3 +4,4 @@ psycopg[binary]==3.3.4
 azure-identity==1.25.3
 azure-keyvault-secrets==4.11.0
 django-storages[azure]==1.14.6
+mozilla-django-oidc==5.0.2

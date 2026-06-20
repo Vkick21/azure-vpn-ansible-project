@@ -5,10 +5,19 @@
 
 {% block content %}
 <p class="lead">Zaloguj się kontem pracownika, aby obsługiwać zgłoszenia.</p>
-<form method="post" class="card login-card">
-  {% csrf_token %}
-  {{ form.as_p }}
-  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-  <button type="submit">Zaloguj</button>
-</form>
+
+<section class="card login-card">
+  <a class="button-primary login-microsoft" href="{% url 'oidc_authentication_init' %}">
+    Zaloguj przez Microsoft Entra ID
+  </a>
+
+  <div class="login-separator"><span>konto awaryjne</span></div>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    <button type="submit">Zaloguj lokalnie</button>
+  </form>
+</section>
 {% endblock %}

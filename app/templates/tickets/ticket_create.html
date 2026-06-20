@@ -10,4 +10,9 @@
   {{ form.as_p }}
   <button type="submit">Wyślij zgłoszenie</button>
 </form>
+
+<p class="operator-entry">
+  Pracujesz w zespole wsparcia?
+  <a href="{% url 'operator-ticket-list' %}">Przejdź do panelu operatora</a>
+</p>
 {% endblock %}

@@ -9,6 +9,9 @@
     key_vault_name: kv-helpdesk-example
     database_host: 10.10.5.4
     helpdesk_domain: helpdesk-demo.example.com
+    entra_tenant_id: <ENTRA_TENANT_ID>
+    entra_client_id: <ENTRA_CLIENT_ID>
+    entra_operator_group_id: <ENTRA_OPERATOR_GROUP_ID>
 
   tasks:
     # Ta ścieżka służy do zmian interfejsu, które nie wymagają migracji.
@@ -29,6 +32,10 @@
           - "--exclude=staticfiles/"
           - "--exclude=media/"
 
+    - name: Zainstaluj zależności aplikacji
+      ansible.builtin.pip:
+        requirements: "{{ app_code }}/requirements.txt"
+        virtualenv: "{{ app_venv }}"
     - name: Zbierz pliki statyczne
       ansible.builtin.command:
         cmd: "{{ app_venv }}/bin/python manage.py collectstatic --noinput"
@@ -41,6 +48,9 @@
         DATABASE_USER: helpdesk_app
         DJANGO_ALLOWED_HOSTS: "{{ helpdesk_domain }},localhost"
         AZURE_STORAGE_ACCOUNT: examplestorageaccount
+        ENTRA_TENANT_ID: "{{ entra_tenant_id }}"
+        ENTRA_CLIENT_ID: "{{ entra_client_id }}"
+        ENTRA_OPERATOR_GROUP_ID: "{{ entra_operator_group_id }}"
       register: static_files
       changed_when: "'0 static files copied' not in static_files.stdout"
 
@@ -52,10 +62,31 @@
         etype: user
         permissions: x
         state: present
+    - name: Przygotuj katalog ustawień usługi
+      ansible.builtin.file:
+        path: /etc/systemd/system/helpdesk.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    # Drop-in dodaje Entra bez przepisywania całej istniejącej usługi.
+    - name: Przygotuj ustawienia Entra dla usługi
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/helpdesk.service.d/entra.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Service]
+          Environment=ENTRA_TENANT_ID={{ entra_tenant_id }}
+          Environment=ENTRA_CLIENT_ID={{ entra_client_id }}
+          Environment=ENTRA_OPERATOR_GROUP_ID={{ entra_operator_group_id }}
     - name: Uruchom ponownie aplikację
       ansible.builtin.systemd:
         name: helpdesk
         state: restarted
+        daemon_reload: true
 
     - name: Sprawdź aplikację po wdrożeniu
       ansible.builtin.uri:

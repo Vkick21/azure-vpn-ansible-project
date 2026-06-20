@@ -2,6 +2,9 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from unittest.mock import patch
+
+from .oidc import EntraOperatorBackend
 
 from .models import Comment, Ticket
 
@@ -108,3 +111,47 @@ class OperatorPanelTests(TestCase):
         comment = Comment.objects.get(ticket=self.ticket)
         self.assertEqual(comment.author, self.operator)
         self.assertEqual(comment.text, "Sprawdzono konfigurację klienta VPN.")
+
+class EntraOperatorBackendTests(TestCase):
+    def setUp(self):
+        self.backend = EntraOperatorBackend()
+        self.claims = {
+            "sub": "entra-subject",
+            "oid": "11111111-2222-3333-4444-555555555555",
+            "preferred_username": "operator@example.com",
+            "given_name": "Jan",
+            "family_name": "Operator",
+            "groups": ["allowed-group"],
+        }
+
+    @patch.dict("os.environ", {"ENTRA_OPERATOR_GROUP_ID": "allowed-group"})
+    def test_member_of_operator_group_is_accepted(self):
+        self.assertTrue(self.backend.verify_claims(self.claims))
+
+    @patch.dict("os.environ", {"ENTRA_OPERATOR_GROUP_ID": "different-group"})
+    def test_user_outside_operator_group_is_rejected(self):
+        self.assertFalse(self.backend.verify_claims(self.claims))
+
+    def test_created_entra_user_is_staff_without_local_password(self):
+        user = self.backend.create_user(self.claims)
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_active)
+        self.assertFalse(user.has_usable_password())
+        self.assertEqual(user.email, "operator@example.com")
+        self.assertEqual(user.username, "entra-11111111-2222-3333-4444-555555555555")
+    @patch(
+        "tickets.oidc.OIDCAuthenticationBackend.get_userinfo",
+        return_value={"sub": "entra-subject", "email": "operator@example.com"},
+    )
+    def test_signed_id_token_groups_are_merged(self, parent_get_userinfo):
+        result = self.backend.get_userinfo(
+            "access-token",
+            "id-token",
+            {
+                "oid": "11111111-2222-3333-4444-555555555555",
+                "groups": ["allowed-group"],
+            },
+        )
+        self.assertEqual(result["groups"], ["allowed-group"])
+        self.assertEqual(result["oid"], "11111111-2222-3333-4444-555555555555")
+        parent_get_userinfo.assert_called_once()

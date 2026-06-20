@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "mozilla_django_oidc",
     "tickets",
 ]
 
@@ -152,3 +153,28 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_URL = "operator-login"
 LOGIN_REDIRECT_URL = "operator-ticket-list"
+
+# Entra ID uwierzytelnia operatorów, a lokalne konto pozostaje awaryjne.
+ENTRA_TENANT_ID = os.getenv("ENTRA_TENANT_ID", "")
+OIDC_RP_CLIENT_ID = os.getenv("ENTRA_CLIENT_ID", "")
+OIDC_RP_CLIENT_SECRET = get_secret("entra-client-secret", "ENTRA_CLIENT_SECRET")
+OIDC_OP_AUTHORIZATION_ENDPOINT = (
+    f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}/oauth2/v2.0/authorize"
+)
+OIDC_OP_TOKEN_ENDPOINT = (
+    f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}/oauth2/v2.0/token"
+)
+OIDC_OP_USER_ENDPOINT = "https://graph.microsoft.com/oidc/userinfo"
+OIDC_OP_JWKS_ENDPOINT = (
+    f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}/discovery/v2.0/keys"
+)
+OIDC_RP_SIGN_ALGO = "RS256"
+OIDC_RP_SCOPES = "openid email profile"
+OIDC_STORE_ACCESS_TOKEN = False
+OIDC_STORE_ID_TOKEN = False
+OIDC_AUTH_REQUEST_EXTRA_PARAMS = {"prompt": "select_account"}
+
+AUTHENTICATION_BACKENDS = [
+    "tickets.oidc.EntraOperatorBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]

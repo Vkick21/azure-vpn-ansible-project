@@ -14,6 +14,9 @@
     database_host: 10.10.5.4
     load_balancer_ip: 203.0.113.10
     helpdesk_domain: helpdesk-demo.example.com
+    entra_tenant_id: <ENTRA_TENANT_ID>
+    entra_client_id: <ENTRA_CLIENT_ID>
+    entra_operator_group_id: <ENTRA_OPERATOR_GROUP_ID>
 
   tasks:
     # Aplikacja działa na osobnym koncie bez dostępu do logowania.
@@ -99,6 +102,9 @@
           Environment=DJANGO_ALLOWED_HOSTS={{ helpdesk_domain }},{{ load_balancer_ip }},10.10.1.4,10.10.1.5,localhost,127.0.0.1
           Environment=DJANGO_CSRF_TRUSTED_ORIGINS=https://{{ helpdesk_domain }}
           Environment=DJANGO_HTTPS_ENABLED=true
+          Environment=ENTRA_TENANT_ID={{ entra_tenant_id }}
+          Environment=ENTRA_CLIENT_ID={{ entra_client_id }}
+          Environment=ENTRA_OPERATOR_GROUP_ID={{ entra_operator_group_id }}
           ExecStart={{ app_venv }}/bin/gunicorn --workers 2 --threads 2 --bind 127.0.0.1:8000 helpdesk.wsgi:application
           Restart=always
           RestartSec=5

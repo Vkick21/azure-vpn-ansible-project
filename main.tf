@@ -217,8 +217,48 @@ resource "azurerm_lb" "helpdesk" {
     name                 = "PublicIPAddress"
     public_ip_address_id = azurerm_public_ip.lb.id
   }
+
 }
 
+# Osobny wewnętrzny Load Balancer utrzymuje panel wyłącznie w sieci prywatnej.
+resource "azurerm_lb" "operator" {
+  name                = "lb-helpdesk-operator"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  sku                 = "Standard"
+
+  frontend_ip_configuration {
+    name                          = "PrivateIPAddress"
+    subnet_id                     = azurerm_subnet.app.id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.10.1.10"
+  }
+}
+
+resource "azurerm_lb_backend_address_pool" "operator" {
+  loadbalancer_id = azurerm_lb.operator.id
+  name            = "operator-backend-pool"
+}
+
+resource "azurerm_network_interface_backend_address_pool_association" "operator_helpdesk01" {
+  network_interface_id    = azurerm_network_interface.helpdesk01.id
+  ip_configuration_name   = "internal"
+  backend_address_pool_id = azurerm_lb_backend_address_pool.operator.id
+}
+
+resource "azurerm_network_interface_backend_address_pool_association" "operator_helpdesk02" {
+  network_interface_id    = azurerm_network_interface.helpdesk02.id
+  ip_configuration_name   = "internal"
+  backend_address_pool_id = azurerm_lb_backend_address_pool.operator.id
+}
+
+resource "azurerm_lb_probe" "operator_http" {
+  loadbalancer_id = azurerm_lb.operator.id
+  name            = "operator-http-probe"
+  protocol        = "Http"
+  port            = 80
+  request_path    = "/health/"
+}
 resource "azurerm_lb_backend_address_pool" "helpdesk" {
   loadbalancer_id = azurerm_lb.helpdesk.id
   name            = "backend-pool"
@@ -275,6 +315,39 @@ resource "azurerm_lb_rule" "https" {
   probe_id = azurerm_lb_probe.http.id
 }
 
+
+# Prywatne reguły zachowują wysoką dostępność panelu przez oba backendy.
+resource "azurerm_lb_rule" "internal_http" {
+  loadbalancer_id                = azurerm_lb.operator.id
+  name                           = "internal-http-rule"
+  protocol                       = "Tcp"
+  frontend_port                  = 80
+  backend_port                   = 80
+  frontend_ip_configuration_name = "PrivateIPAddress"
+  disable_outbound_snat          = true
+
+  backend_address_pool_ids = [
+    azurerm_lb_backend_address_pool.operator.id
+  ]
+
+  probe_id = azurerm_lb_probe.operator_http.id
+}
+
+resource "azurerm_lb_rule" "internal_https" {
+  loadbalancer_id                = azurerm_lb.operator.id
+  name                           = "internal-https-rule"
+  protocol                       = "Tcp"
+  frontend_port                  = 443
+  backend_port                   = 443
+  frontend_ip_configuration_name = "PrivateIPAddress"
+  disable_outbound_snat          = true
+
+  backend_address_pool_ids = [
+    azurerm_lb_backend_address_pool.operator.id
+  ]
+
+  probe_id = azurerm_lb_probe.operator_http.id
+}
 
 # Bastion zapewnia awaryjny dostęp administracyjny bez IP na VM.
 resource "azurerm_public_ip" "bastion" {

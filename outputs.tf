@@ -11,3 +11,8 @@ output "vnet_name" {
 output "helpdesk_fqdn" {
   value = "${azurerm_public_ip.lb.domain_name_label}.${azurerm_resource_group.main.location}.cloudapp.azure.com"
 }
+
+# Prywatny adres panelu dostępny po zestawieniu VPN.
+output "helpdesk_private_ip" {
+  value = "10.10.1.10"
+}
