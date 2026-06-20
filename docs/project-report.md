@@ -170,3 +170,9 @@ Możliwe rozszerzenia to powiadomienia e-mail, SLA zgłoszeń, historia audytowa
 ## 14. Podsumowanie
 
 Projekt realizuje kompletny przepływ: publiczny użytkownik wysyła zgłoszenie, dane trafiają do PostgreSQL i Azure Storage, a operator po VPN loguje się przez Entra ID i obsługuje zgłoszenie. Infrastruktura, konfiguracja, bezpieczeństwo, kopie zapasowe i kosztorys są odtwarzalne z repozytorium.
+
+## 15. Demonstracja dzialajacego projektu
+
+Podczas prezentacji system moze zostac pokazany jako aktywne srodowisko, a nie statyczny zestaw plikow. Autor moze wyslac publiczne zgloszenie, polaczyc VPN, zalogowac operatora przez Entra ID, obsluzyc ticket oraz pokazac plan kontroli kosztow.
+
+Polecenie `.\env.ps1 -Action cost-plan` przedstawia plan usuniecia Bastiona i VPN Gateway bez wykonywania `terraform apply`. Polecenia `.\env.ps1 -Action stop` i `.\env.ps1 -Action start` zarzadzaja stanem trzech VM w bezpiecznej kolejnosci. Operatorami mozna zarzadzac idempotentnym playbookiem `ansible/manage-operator.yml`.

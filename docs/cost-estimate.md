@@ -36,3 +36,13 @@ cd C:\Projects\terraform
 ```
 
 Skrypt zapisuje pliki CSV w `docs/costs/`. Ten katalog jest ignorowany przez Git. Skrypt używa bieżącej sesji Azure CLI, a token pozostaje wyłącznie w pamięci procesu.
+
+## Demonstracja trybu oszczednego
+
+Polecenie ponizej generuje tylko plan usuniecia Bastiona i VPN Gateway. Nie wykonuje zadnej zmiany w Azure:
+
+```powershell
+.\env.ps1 -Action cost-plan
+```
+
+Na prezentacji nalezy pokazac podsumowanie planu, a nastepnie przerwac na etapie przed `terraform apply`. Zatrzymanie trzech VM przez `.\env.ps1 -Action stop` jest osobna operacja i nie usuwa dyskow ani danych PostgreSQL.

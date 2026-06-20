@@ -92,3 +92,24 @@ Aktualizacja kosztorysu:
 - [Kosztorys](docs/cost-estimate.md)
 - [Microsoft Entra ID](docs/entra-id.md)
 - [Dowody wdrożenia i testów](docs/evidence/test-summary.md)
+
+## Demonstracja kontroli kosztow
+
+Zwykly plan potwierdza zgodnosc dzialajacego srodowiska:
+
+```powershell
+.\env.ps1 -Action plan
+```
+
+Plan oszczedny pokazuje usuniecie Bastiona i VPN Gateway, ale nie wykonuje `terraform apply`:
+
+```powershell
+.\env.ps1 -Action cost-plan
+```
+
+Maszyny aplikacji i bazy mozna zatrzymac bez niszczenia infrastruktury:
+
+```powershell
+.\env.ps1 -Action stop
+.\env.ps1 -Action start
+```

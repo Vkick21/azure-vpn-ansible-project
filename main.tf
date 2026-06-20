@@ -438,7 +438,7 @@ resource "azurerm_lb_rule" "internal_https" {
 
 # Bastion zapewnia awaryjny dostep administracyjny bez IP na VM.
 resource "azurerm_public_ip" "bastion" {
-  count = var.enable_bastion ? 1 : 0
+  count = local.bastion_enabled ? 1 : 0
 
   name                = "pip-bastion"
   location            = azurerm_resource_group.main.location
@@ -449,7 +449,7 @@ resource "azurerm_public_ip" "bastion" {
 }
 
 resource "azurerm_bastion_host" "main" {
-  count               = local.full ? 1 : 0
+  count               = local.bastion_enabled ? 1 : 0
   name                = "bastion-helpdesk"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
