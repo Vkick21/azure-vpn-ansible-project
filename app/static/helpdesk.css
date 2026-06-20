@@ -68,6 +68,16 @@ button {
   cursor: pointer;
 }
 
+.captcha-field {
+  margin: 20px 0;
+  overflow-x: auto;
+}
+
+.errorlist {
+  padding-left: 20px;
+  color: #991b1b;
+}
+
 .success code {
   display: block;
   overflow-wrap: anywhere;

@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from unittest.mock import patch
 
@@ -31,6 +31,41 @@ class TicketViewsTests(TestCase):
         self.assertEqual(ticket.status, Ticket.Status.NEW)
         self.assertTrue(ticket.attachment.name.endswith(".txt"))
         self.assertTrue(ticket.attachment.storage.exists(ticket.attachment.name))
+
+    @override_settings(RECAPTCHA_ENABLED=True, RECAPTCHA_SITE_KEY="public-test-key")
+    @patch("tickets.views.verify_recaptcha", return_value=False)
+    def test_public_form_rejects_invalid_recaptcha(self, verify_recaptcha):
+        response = self.client.post(
+            reverse("ticket-create"),
+            {
+                "requester_email": "bot@example.com",
+                "title": "Automatyczne zgłoszenie",
+                "description": "Treść wysłana przez automat.",
+                "priority": Ticket.Priority.LOW,
+                "g-recaptcha-response": "invalid-token",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Potwierdź, że nie jesteś robotem")
+        self.assertFalse(Ticket.objects.exists())
+        verify_recaptcha.assert_called_once_with("invalid-token")
+
+    @override_settings(RECAPTCHA_ENABLED=True, RECAPTCHA_SITE_KEY="public-test-key")
+    @patch("tickets.views.verify_recaptcha", return_value=True)
+    def test_public_form_accepts_valid_recaptcha(self, verify_recaptcha):
+        response = self.client.post(
+            reverse("ticket-create"),
+            {
+                "requester_email": "human@example.com",
+                "title": "Prawidłowe zgłoszenie",
+                "description": "Formularz został potwierdzony.",
+                "priority": Ticket.Priority.MEDIUM,
+                "g-recaptcha-response": "valid-token",
+            },
+        )
+        ticket = Ticket.objects.get()
+        self.assertRedirects(response, reverse("ticket-success", kwargs={"pk": ticket.pk}))
+        verify_recaptcha.assert_called_once_with("valid-token")
 
 
 class OperatorPanelTests(TestCase):

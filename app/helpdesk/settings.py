@@ -41,6 +41,16 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
+# Publiczny klucz trafia do HTML, a prywatny pozostaje w Azure Key Vault.
+RECAPTCHA_ENABLED = os.getenv("RECAPTCHA_ENABLED", "false").lower() == "true"
+RECAPTCHA_SITE_KEY = os.getenv("RECAPTCHA_SITE_KEY", "")
+RECAPTCHA_SECRET_KEY = (
+    get_secret("recaptcha-secret-key", "RECAPTCHA_SECRET_KEY")
+    if RECAPTCHA_ENABLED
+    else ""
+)
+RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify"
+
 # Nginx kończy TLS i przekazuje Django informację, że użytkownik korzysta z HTTPS.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 HTTPS_ENABLED = os.getenv("DJANGO_HTTPS_ENABLED", "false").lower() == "true"

@@ -8,6 +8,12 @@
 <form method="post" enctype="multipart/form-data" class="card">
   {% csrf_token %}
   {{ form.as_p }}
+  {% if recaptcha_enabled %}
+    <div class="captcha-field">
+      <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+    </div>
+    <script src="https://www.google.com/recaptcha/api.js?hl=pl" async defer></script>
+  {% endif %}
   <button type="submit">Wyślij zgłoszenie</button>
 </form>
 

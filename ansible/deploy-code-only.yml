@@ -12,6 +12,7 @@
     entra_tenant_id: "{{ lookup('ansible.builtin.env', 'ENTRA_TENANT_ID') }}"
     entra_client_id: "{{ lookup('ansible.builtin.env', 'ENTRA_CLIENT_ID') }}"
     entra_operator_group_id: "{{ lookup('ansible.builtin.env', 'ENTRA_OPERATOR_GROUP_ID') }}"
+    recaptcha_site_key: "{{ lookup('ansible.builtin.env', 'RECAPTCHA_SITE_KEY') }}"
 
   tasks:
     # Ta sciezka sluzy do zmian interfejsu, ktore nie wymagaja migracji.
@@ -70,8 +71,8 @@
         group: root
         mode: "0755"
 
-    # Drop-in dodaje Entra bez przepisywania calej istniejacej uslugi.
-    - name: Przygotuj ustawienia Entra dla uslugi
+    # Drop-in dodaje Entra i reCAPTCHA bez przepisywania calej uslugi.
+    - name: Przygotuj ustawienia aplikacji dla uslugi
       ansible.builtin.copy:
         dest: /etc/systemd/system/helpdesk.service.d/entra.conf
         owner: root
@@ -82,6 +83,8 @@
           Environment=ENTRA_TENANT_ID={{ entra_tenant_id }}
           Environment=ENTRA_CLIENT_ID={{ entra_client_id }}
           Environment=ENTRA_OPERATOR_GROUP_ID={{ entra_operator_group_id }}
+          Environment=RECAPTCHA_ENABLED=true
+          Environment=RECAPTCHA_SITE_KEY={{ recaptcha_site_key }}
     - name: Uruchom ponownie aplikacje
       ansible.builtin.systemd:
         name: helpdesk

@@ -16,6 +16,7 @@ Projekt przedstawia kompletny system Helpdesk uruchomiony w Microsoft Azure. Inf
 - automatyczny certyfikat Let's Encrypt;
 - monitoring przez Azure Monitor i Log Analytics;
 - reguły NSG ograniczające ruch między segmentami.
+- ochrona publicznego formularza przez Google reCAPTCHA v2.
 
 ## Dostęp
 
@@ -61,6 +62,20 @@ Copy-Item .\config.example.ps1 .\config.local.ps1
 ```
 
 Plik `config.local.ps1` jest ignorowany przez Git.
+
+## Google reCAPTCHA v2
+
+Publiczny klucz witryny ustaw w `config.local.ps1` jako `RECAPTCHA_SITE_KEY`.
+Prywatny klucz zapisz w istniejącym Azure Key Vault:
+
+```powershell
+az keyvault secret set `
+  --vault-name $env:KEY_VAULT_NAME `
+  --name recaptcha-secret-key `
+  --value "<PRYWATNY_KLUCZ_RECAPTCHA>"
+```
+
+Prywatnego klucza nie należy zapisywać w repozytorium.
 
 ## Podstawowe polecenia
 
