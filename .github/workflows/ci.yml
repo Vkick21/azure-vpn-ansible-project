@@ -32,11 +32,12 @@ jobs:
           terraform_version: 1.15.6
           terraform_wrapper: false
 
-      - name: Create validation SSH key fixture
+      - name: Create validation file fixtures
         shell: bash
         run: |
           mkdir -p .ci
           echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGludGVudGlvbmFsbHktbm90LWEtcmVhbC1rZXk ci-validation" > .ci/id_ed25519.pub
+          printf "ci-only-certificate-placeholder" > AzureVPNRootCert.cer
 
       - name: Check Terraform formatting
         run: terraform fmt -check -recursive
