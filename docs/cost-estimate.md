@@ -4,7 +4,9 @@ Region referencyjny: West Europe
 
 ## Szacunek miesięczny
 
-Na podstawie obserwowanego profilu usług przyjęto przedział **235–300 EUR miesięcznie** dla środowiska działającego przez całą dobę. Kwota jest orientacyjna i zależy od cennika subskrypcji, transferu, liczby logów oraz czasu pracy zasobów.
+Na podstawie kalkulatora Microsoft Azure przyjęto koszt około **353,34 USD miesięcznie** i **4 240,05 USD rocznie** dla środowiska działającego przez 730 godzin miesięcznie. Kwota jest orientacyjna i zależy od cennika subskrypcji, transferu, liczby logów oraz czasu pracy zasobów.
+
+Kalkulacja obejmuje trzy maszyny `Standard_B1s` z systemem Linux i trzema dyskami S4, Azure Bastion Basic, VPN Gateway VpnGw1AZ, konto Storage, Azure Monitor oraz dwa moduły Azure Load Balancer.
 
 Największe składniki kosztu:
 
