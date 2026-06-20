@@ -115,7 +115,7 @@ jobs:
       USE_SQLITE_FOR_TESTS: "true"
       DJANGO_SECRET_KEY: test-only-key
       DJANGO_ALLOWED_HOSTS: testserver,localhost
-      DJANGO_MEDIA_ROOT: ${{ runner.temp }}/vkickhamster-test-media
+      DJANGO_MEDIA_ROOT: /tmp/vkickhamster-test-media
       ENTRA_TENANT_ID: test-tenant
       ENTRA_CLIENT_ID: test-client
       ENTRA_CLIENT_SECRET: test-secret
