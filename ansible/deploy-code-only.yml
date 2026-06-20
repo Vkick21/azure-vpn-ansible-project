@@ -8,6 +8,7 @@
     app_venv: /opt/helpdesk/venv
     key_vault_name: "{{ lookup('ansible.builtin.env', 'KEY_VAULT_NAME') }}"
     database_host: 10.10.5.4
+    load_balancer_ip: "{{ lookup('ansible.builtin.env', 'HELPDESK_PUBLIC_IP') }}"
     helpdesk_domain: "{{ lookup('ansible.builtin.env', 'HELPDESK_FQDN') }}"
     operator_domain: "{{ lookup('ansible.builtin.env', 'HELPDESK_OPERATOR_FQDN') }}"
     entra_tenant_id: "{{ lookup('ansible.builtin.env', 'ENTRA_TENANT_ID') }}"
@@ -48,7 +49,7 @@
         DATABASE_HOST: "{{ database_host }}"
         DATABASE_NAME: helpdesk
         DATABASE_USER: helpdesk_app
-        DJANGO_ALLOWED_HOSTS: "{{ helpdesk_domain }},{{ operator_domain }},localhost"
+        DJANGO_ALLOWED_HOSTS: "{{ helpdesk_domain }},{{ operator_domain }},{{ load_balancer_ip }},10.10.1.4,10.10.1.5,localhost,127.0.0.1"
         AZURE_STORAGE_ACCOUNT: "{{ storage_account_name }}"
         ENTRA_TENANT_ID: "{{ entra_tenant_id }}"
         ENTRA_CLIENT_ID: "{{ entra_client_id }}"
@@ -84,7 +85,7 @@
           Environment=ENTRA_TENANT_ID={{ entra_tenant_id }}
           Environment=ENTRA_CLIENT_ID={{ entra_client_id }}
           Environment=ENTRA_OPERATOR_GROUP_ID={{ entra_operator_group_id }}
-          Environment=DJANGO_ALLOWED_HOSTS={{ helpdesk_domain }},{{ operator_domain }},localhost
+          Environment=DJANGO_ALLOWED_HOSTS={{ helpdesk_domain }},{{ operator_domain }},{{ load_balancer_ip }},10.10.1.4,10.10.1.5,localhost,127.0.0.1
           Environment=DJANGO_CSRF_TRUSTED_ORIGINS=https://{{ helpdesk_domain }},https://{{ operator_domain }}
           Environment=RECAPTCHA_ENABLED=true
           Environment=RECAPTCHA_SITE_KEY={{ recaptcha_site_key }}

@@ -207,7 +207,9 @@
           - "{{ python_path }}"
           - "{{ certificate_helper }}"
           - sync
-      changed_when: false
+      # Nginx musi przeladowac certyfikat nawet wtedy, gdy jego konfiguracja sie nie zmienia.
+      changed_when: true
+      notify: Przeladuj Nginx
 
     # Health po HTTP pozostaje dla Load Balancera, a ruch uzytkownikow przechodzi na HTTPS.
     - name: Dodaj reguly dostepu tylko przez VPN
