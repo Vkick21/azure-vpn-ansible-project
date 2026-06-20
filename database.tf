@@ -60,6 +60,63 @@ resource "azurerm_network_security_group" "database" {
     source_address_prefix      = "VirtualNetwork"
     destination_address_prefix = "*"
   }
+
+  # Block unneeded outbound communication while keeping updates and Azure backups.
+  security_rule {
+    name                       = "AllowWebOutbound"
+    priority                   = 2000
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_ranges    = ["80", "443"]
+    source_address_prefix      = "*"
+    destination_address_prefix = "Internet"
+  }
+  security_rule {
+    name                       = "AllowAzureHTTPSOutbound"
+    priority                   = 2010
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "*"
+    destination_address_prefix = "AzureCloud"
+  }
+  security_rule {
+    name                       = "AllowAzureDNSOutbound"
+    priority                   = 2020
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "53"
+    source_address_prefix      = "*"
+    destination_address_prefix = "AzurePlatformDNS"
+  }
+  security_rule {
+    name                       = "DenyOtherVnetOutbound"
+    priority                   = 4090
+    direction                  = "Outbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "VirtualNetwork"
+  }
+  security_rule {
+    name                       = "DenyOtherInternetOutbound"
+    priority                   = 4091
+    direction                  = "Outbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "Internet"
+  }
 }
 
 resource "azurerm_network_interface" "database" {

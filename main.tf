@@ -90,42 +90,140 @@ resource "azurerm_network_security_group" "app" {
   resource_group_name = azurerm_resource_group.main.name
 
   security_rule {
-    name                       = "AllowSSH"
+    name                       = "AllowSSHFromVPN"
     priority                   = 1000
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix      = "*"
+    source_address_prefix      = "172.20.200.0/24"
     destination_address_prefix = "*"
   }
   security_rule {
-    name                       = "AllowHTTP"
+    name                       = "AllowSSHFromBastion"
     priority                   = 1010
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
-    destination_port_range     = "80"
-    source_address_prefix      = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "10.10.4.0/26"
     destination_address_prefix = "*"
   }
-
-  # HTTPS udostepnia formularz bez wysylania danych otwartym tekstem.
   security_rule {
-    name                       = "AllowHTTPS"
+    name                       = "AllowPublicWeb"
     priority                   = 1020
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
-    destination_port_range     = "443"
-    source_address_prefix      = "*"
+    destination_port_ranges    = ["80", "443"]
+    source_address_prefix      = "Internet"
     destination_address_prefix = "*"
   }
-}
+  security_rule {
+    name                       = "AllowWebFromVPN"
+    priority                   = 1030
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_ranges    = ["80", "443"]
+    source_address_prefix      = "172.20.200.0/24"
+    destination_address_prefix = "*"
+  }
+  security_rule {
+    name                       = "AllowLoadBalancerProbe"
+    priority                   = 1040
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = "AzureLoadBalancer"
+    destination_address_prefix = "*"
+  }
 
+  # Block lateral access from the remaining VNet subnets.
+  security_rule {
+    name                       = "DenyOtherVnetInbound"
+    priority                   = 4090
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "VirtualNetwork"
+    destination_address_prefix = "*"
+  }
+  security_rule {
+    name                       = "AllowPostgreSQLOutbound"
+    priority                   = 2000
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "5432"
+    source_address_prefix      = "*"
+    destination_address_prefix = "10.10.5.4"
+  }
+  security_rule {
+    name                       = "AllowWebOutbound"
+    priority                   = 2010
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_ranges    = ["80", "443"]
+    source_address_prefix      = "*"
+    destination_address_prefix = "Internet"
+  }
+  security_rule {
+    name                       = "AllowAzureHTTPSOutbound"
+    priority                   = 2020
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "*"
+    destination_address_prefix = "AzureCloud"
+  }
+  security_rule {
+    name                       = "AllowAzureDNSOutbound"
+    priority                   = 2030
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "53"
+    source_address_prefix      = "*"
+    destination_address_prefix = "AzurePlatformDNS"
+  }
+  security_rule {
+    name                       = "DenyOtherVnetOutbound"
+    priority                   = 4091
+    direction                  = "Outbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "VirtualNetwork"
+  }
+  security_rule {
+    name                       = "DenyOtherInternetOutbound"
+    priority                   = 4092
+    direction                  = "Outbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "Internet"
+  }
+}
 resource "azurerm_network_interface_security_group_association" "helpdesk01" {
   network_interface_id      = azurerm_network_interface.helpdesk01.id
   network_security_group_id = azurerm_network_security_group.app.id
