@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("start", "stop", "restart", "status", "plan", "cost-plan")]
+    [ValidateSet("start", "stop", "restart", "status", "plan", "private-plan", "cost-plan")]
     [string]$Action,
 
     [string]$ResourceGroup = "rg-helpdesk-prod"
@@ -70,9 +70,15 @@ switch ($Action)
         terraform plan
     }
 
+    "private-plan" {
+        # Pokazuje migracje do jednego prywatnego LB bez wykonywania zmian.
+        Write-Host "Private-only plan - Helpdesk would require VPN. No apply is executed."
+        terraform plan -var="private_only=true"
+    }
+
     "cost-plan" {
-        # Ten wariant pokazuje oszczednosci bez wykonywania zmian w Azure.
-        Write-Host "Cost plan only - Bastion and VPN would be removed. No apply is executed."
-        terraform plan -var="enable_bastion=false" -var="enable_vpn=false"
+        # VPN pozostaje wymagany, dlatego oszczednosci dotycza Bastiona.
+        Write-Host "Cost plan only - Bastion would be removed, VPN stays enabled. No apply is executed."
+        terraform plan -var="enable_bastion=false" -var="enable_vpn=true"
     }
 }

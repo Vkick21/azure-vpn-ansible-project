@@ -5,6 +5,8 @@ param(
 
     [string]$Domain = $env:HELPDESK_OPERATOR_FQDN,
 
+    [string]$PublicDomain = $env:HELPDESK_FQDN,
+
     [string]$PrivateIp = $env:HELPDESK_PRIVATE_IP
 )
 
@@ -17,6 +19,12 @@ if (-not $Domain -or -not $PrivateIp) {
 
 $HostsPath = Join-Path $env:SystemRoot "System32\drivers\etc\hosts"
 $ManagedMarker = "# VKICKHAMSTER operator przez VPN"
+$PrivateOnly = $env:HELPDESK_PRIVATE_ONLY -eq "true"
+$ManagedDomains = @($Domain)
+if ($PrivateOnly) {
+    $ManagedDomains += $PublicDomain
+}
+$ManagedDomains = @($ManagedDomains | Where-Object { $_ } | Select-Object -Unique)
 
 function Set-HostsFileWithRetry {
     param(
@@ -50,9 +58,11 @@ if ($Action -ne "Status" -and -not $IsAdmin) {
 }
 
 if ($Action -eq "Status") {
-    Write-Host "Domena: $Domain"
+    Write-Host "Domeny kierowane przez VPN: $($ManagedDomains -join ', ')"
     Write-Host "Oczekiwany prywatny adres: $PrivateIp"
-    Resolve-DnsName $Domain -Type A
+    foreach ($ManagedDomain in $ManagedDomains) {
+        Resolve-DnsName $ManagedDomain -Type A
+    }
     Test-NetConnection $PrivateIp -Port 443
     exit
 }
@@ -76,7 +86,9 @@ $RemainingLines = $CurrentLines | Where-Object {
 }
 
 if ($Action -eq "Add") {
-    $RemainingLines += $PrivateIp + [char]9 + $Domain + " " + $ManagedMarker
+    foreach ($ManagedDomain in $ManagedDomains) {
+        $RemainingLines += $PrivateIp + [char]9 + $ManagedDomain + " " + $ManagedMarker
+    }
 }
 
 Set-HostsFileWithRetry -Lines $RemainingLines

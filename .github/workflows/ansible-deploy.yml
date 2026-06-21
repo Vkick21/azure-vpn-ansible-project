@@ -1,0 +1,60 @@
+name: Ansible from Azure runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      playbook:
+        description: Wybierz bezpieczna operacje
+        required: true
+        type: choice
+        options:
+          - verify-helpdesk.yml
+          - deploy-code-only.yml
+          - https.yml
+          - backup-postgresql.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ansible-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment: production
+    runs-on: [self-hosted, linux, vkickhamster-mgmt]
+    env:
+      HELPDESK_FQDN: ${{ vars.HELPDESK_FQDN }}
+      HELPDESK_OPERATOR_FQDN: ${{ vars.HELPDESK_OPERATOR_FQDN }}
+      HELPDESK_PUBLIC_IP: ${{ vars.HELPDESK_PUBLIC_IP }}
+      HELPDESK_PRIVATE_IP: ${{ vars.HELPDESK_PRIVATE_IP }}
+      HELPDESK_DATABASE_IP: ${{ vars.HELPDESK_DATABASE_IP }}
+      AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+      KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
+      ENTRA_TENANT_ID: ${{ vars.ENTRA_TENANT_ID }}
+      ENTRA_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
+      ENTRA_OPERATOR_GROUP_ID: ${{ vars.ENTRA_OPERATOR_GROUP_ID }}
+      RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
+
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v7
+
+      - name: Zainstaluj kolekcje Ansible
+        run: ansible-galaxy collection install ansible.posix
+
+      - name: Dodaj klucze hostow prywatnych
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -H 10.10.1.4 10.10.1.5 10.10.5.4 >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Sprawdz skladnie
+        working-directory: ansible
+        run: ansible-playbook -i inventory.ini "${{ inputs.playbook }}" --syntax-check
+
+      - name: Uruchom wybrany playbook
+        working-directory: ansible
+        run: ansible-playbook -i inventory.ini "${{ inputs.playbook }}"

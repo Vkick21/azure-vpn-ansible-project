@@ -1,0 +1,42 @@
+name: Control Azure management runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Wybierz stan VM ansible-mgmt
+        required: true
+        type: choice
+        options:
+          - status
+          - start
+          - stop
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  control:
+    environment: production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Zaloguj Azure przez GitHub OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_RUNNER_CONTROL_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Pokaz stan
+        if: ${{ inputs.action == 'status' }}
+        run: az vm get-instance-view --resource-group rg-helpdesk-management --name ansible-mgmt --query instanceView.statuses[1].displayStatus --output tsv
+
+      - name: Uruchom runner
+        if: ${{ inputs.action == 'start' }}
+        run: az vm start --resource-group rg-helpdesk-management --name ansible-mgmt
+
+      - name: Zatrzymaj i zwolnij zasoby compute
+        if: ${{ inputs.action == 'stop' }}
+        run: az vm deallocate --resource-group rg-helpdesk-management --name ansible-mgmt

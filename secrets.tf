@@ -19,19 +19,26 @@ resource "azurerm_key_vault" "helpdesk" {
   soft_delete_retention_days = 7
   purge_protection_enabled   = false
 
-  # Terraform moze utworzyc i aktualizowac sekrety.
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
+  # Biezacy wykonawca i jawnie wskazane tozsamosci zachowuja dostep do sekretow.
+  dynamic "access_policy" {
+    for_each = setunion(
+      toset([data.azurerm_client_config.current.object_id]),
+      var.additional_key_vault_admin_object_ids
+    )
 
-    secret_permissions = [
-      "Delete",
-      "Get",
-      "List",
-      "Purge",
-      "Recover",
-      "Set"
-    ]
+    content {
+      tenant_id = data.azurerm_client_config.current.tenant_id
+      object_id = access_policy.value
+
+      secret_permissions = [
+        "Delete",
+        "Get",
+        "List",
+        "Purge",
+        "Recover",
+        "Set"
+      ]
+    }
   }
 
   # Obie VM aplikacyjne moga tylko odczytywac sekrety.

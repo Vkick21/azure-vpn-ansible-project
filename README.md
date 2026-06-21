@@ -130,7 +130,10 @@ Aktualizacja kosztorysu:
 - [Sprawozdanie projektu](docs/project-report.md)
 - [Routing i NSG](docs/network-security.md)
 - [Kosztorys](docs/cost-estimate.md)
+- [Plan optymalizacji kosztow](docs/cost-optimization-plan.md)
 - [Microsoft Entra ID](docs/entra-id.md)
+- [GitHub Actions na VM zarzadzajacej](docs/github-runner.md)
+- [Migracja tylko przez VPN](docs/private-only-migration.md)
 - [Dowody wdrożenia i testów](docs/evidence/test-summary.md)
 
 ## Demonstracja kontroli kosztow
@@ -141,11 +144,21 @@ Zwykly plan potwierdza zgodnosc dzialajacego srodowiska:
 .\env.ps1 -Action plan
 ```
 
-Plan oszczedny pokazuje usuniecie Bastiona i VPN Gateway, ale nie wykonuje `terraform apply`:
+Plan oszczedny usuwa tylko Bastiona, zachowuje wymagany VPN i nie wykonuje `terraform apply`:
 
 ```powershell
 .\env.ps1 -Action cost-plan
 ```
+
+Plan dostepu tylko przez VPN i jednego prywatnego Load Balancera:
+
+```powershell
+.\env.ps1 -Action private-plan
+```
+
+Automatyzacja GitHub Actions korzysta z osobnej VM `ansible-mgmt`. Jej kod
+znajduje sie w `bootstrap/`, a glowny Terraform nie moze jej restartowac ani
+usunac.
 
 Maszyny aplikacji i bazy mozna zatrzymac bez niszczenia infrastruktury:
 

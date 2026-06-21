@@ -9,12 +9,12 @@ output "vnet_name" {
 
 # Adres uzywany przez uzytkownikow po uruchomieniu HTTPS.
 output "helpdesk_fqdn" {
-  value = "${azurerm_public_ip.lb.domain_name_label}.${azurerm_resource_group.main.location}.cloudapp.azure.com"
+  value = var.private_only ? "${var.helpdesk_dns_label}.${azurerm_resource_group.main.location}.cloudapp.azure.com" : azurerm_public_ip.lb[0].fqdn
 }
 
 # Osobna nazwa uzywana tylko przez panel operatora.
 output "operator_fqdn" {
-  value = azurerm_traffic_manager_profile.operator.fqdn
+  value = var.private_only ? "${var.operator_dns_label}.trafficmanager.net" : azurerm_traffic_manager_profile.operator[0].fqdn
 }
 
 # Prywatny adres panelu dostepny po zestawieniu VPN.

@@ -1,0 +1,22 @@
+---
+- name: Dodaj klucz SSH VM zarzadzajacej
+  hosts: all
+  become: true
+
+  vars:
+    management_runner_public_key: "{{ lookup('ansible.builtin.env', 'MANAGEMENT_RUNNER_PUBLIC_KEY') }}"
+
+  tasks:
+    - name: Sprawdz czy podano klucz runnera
+      ansible.builtin.assert:
+        that:
+          - management_runner_public_key | length > 40
+          - management_runner_public_key is match('^ssh-ed25519 ')
+        fail_msg: "Set MANAGEMENT_RUNNER_PUBLIC_KEY to the public key from ansible-mgmt."
+
+    # Klucz prywatny pozostaje tylko na VM runnera.
+    - name: Dopuszcz runner do konta azureuser
+      ansible.posix.authorized_key:
+        user: azureuser
+        key: "{{ management_runner_public_key }}"
+        state: present

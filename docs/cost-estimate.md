@@ -41,10 +41,17 @@ Skrypt zapisuje pliki CSV w `docs/costs/`. Ten katalog jest ignorowany przez Git
 
 ## Demonstracja trybu oszczednego
 
-Polecenie ponizej generuje tylko plan usuniecia Bastiona i VPN Gateway. Nie wykonuje zadnej zmiany w Azure:
+Polecenie ponizej generuje tylko plan usuniecia Bastiona. VPN pozostaje wymagany i aktywny. Polecenie nie wykonuje zadnej zmiany w Azure:
 
 ```powershell
 .\env.ps1 -Action cost-plan
+```
+
+Plan docelowej architektury prywatnej usuwa publiczny LB, publiczny adres
+aplikacji, Traffic Manager i Bastion, ale zachowuje VPN oraz dane:
+
+```powershell
+.\env.ps1 -Action private-plan
 ```
 
 Na prezentacji nalezy pokazac podsumowanie planu, a nastepnie przerwac na etapie przed `terraform apply`. Zatrzymanie trzech VM przez `.\env.ps1 -Action stop` jest osobna operacja i nie usuwa dyskow ani danych PostgreSQL.

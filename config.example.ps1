@@ -2,8 +2,11 @@
 $env:AZURE_EXTENSION_DIR = Join-Path $env:USERPROFILE ".azure\cliextensions-user"
 $env:TF_VAR_helpdesk_dns_label = "helpdesk-demo"
 $env:TF_VAR_operator_dns_label = "helpdesk-operator-demo"
+$env:TF_VAR_private_only = "false"
+$env:TF_VAR_additional_key_vault_admin_object_ids = '["00000000-0000-0000-0000-000000000000"]'
 $env:HELPDESK_FQDN = "helpdesk-demo.example.com"
 $env:HELPDESK_OPERATOR_FQDN = "helpdesk-operator-demo.trafficmanager.net"
+$env:HELPDESK_PRIVATE_ONLY = "false"
 $env:HELPDESK_PUBLIC_IP = "203.0.113.10"
 $env:HELPDESK_PRIVATE_IP = "10.10.1.10"
 $env:HELPDESK_DATABASE_IP = "10.10.5.4"

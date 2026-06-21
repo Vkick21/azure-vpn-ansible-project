@@ -101,6 +101,17 @@ resource "azurerm_network_security_group" "app" {
     destination_address_prefix = "*"
   }
   security_rule {
+    name                       = "AllowSSHFromManagement"
+    priority                   = 1005
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "10.10.2.10/32"
+    destination_address_prefix = "*"
+  }
+  security_rule {
     name                       = "AllowSSHFromBastion"
     priority                   = 1010
     direction                  = "Inbound"
@@ -111,16 +122,19 @@ resource "azurerm_network_security_group" "app" {
     source_address_prefix      = "10.10.4.0/26"
     destination_address_prefix = "*"
   }
-  security_rule {
-    name                       = "AllowPublicWeb"
-    priority                   = 1020
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_ranges    = ["80", "443"]
-    source_address_prefix      = "Internet"
-    destination_address_prefix = "*"
+  dynamic "security_rule" {
+    for_each = var.private_only ? [] : [1]
+    content {
+      name                       = "AllowPublicWeb"
+      priority                   = 1020
+      direction                  = "Inbound"
+      access                     = "Allow"
+      protocol                   = "Tcp"
+      source_port_range          = "*"
+      destination_port_ranges    = ["80", "443"]
+      source_address_prefix      = "Internet"
+      destination_address_prefix = "*"
+    }
   }
   security_rule {
     name                       = "AllowWebFromVPN"
@@ -283,6 +297,8 @@ resource "azurerm_network_interface_security_group_association" "helpdesk02" {
 
 # Publiczny Load Balancer rozdziela ruch HTTP miedzy obie VM.
 resource "azurerm_public_ip" "lb" {
+  count = var.private_only ? 0 : 1
+
   name                = "pip-helpdesk-lb"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -295,6 +311,8 @@ resource "azurerm_public_ip" "lb" {
 }
 
 resource "azurerm_lb" "helpdesk" {
+  count = var.private_only ? 0 : 1
+
   name                = "lb-helpdesk"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -302,7 +320,7 @@ resource "azurerm_lb" "helpdesk" {
 
   frontend_ip_configuration {
     name                 = "PublicIPAddress"
-    public_ip_address_id = azurerm_public_ip.lb.id
+    public_ip_address_id = azurerm_public_ip.lb[0].id
   }
 
 }
@@ -347,24 +365,32 @@ resource "azurerm_lb_probe" "operator_http" {
   request_path    = "/health/"
 }
 resource "azurerm_lb_backend_address_pool" "helpdesk" {
-  loadbalancer_id = azurerm_lb.helpdesk.id
+  count = var.private_only ? 0 : 1
+
+  loadbalancer_id = azurerm_lb.helpdesk[0].id
   name            = "backend-pool"
 }
 
 resource "azurerm_network_interface_backend_address_pool_association" "helpdesk01" {
+  count = var.private_only ? 0 : 1
+
   network_interface_id    = azurerm_network_interface.helpdesk01.id
   ip_configuration_name   = "internal"
-  backend_address_pool_id = azurerm_lb_backend_address_pool.helpdesk.id
+  backend_address_pool_id = azurerm_lb_backend_address_pool.helpdesk[0].id
 }
 
 resource "azurerm_network_interface_backend_address_pool_association" "helpdesk02" {
+  count = var.private_only ? 0 : 1
+
   network_interface_id    = azurerm_network_interface.helpdesk02.id
   ip_configuration_name   = "internal"
-  backend_address_pool_id = azurerm_lb_backend_address_pool.helpdesk.id
+  backend_address_pool_id = azurerm_lb_backend_address_pool.helpdesk[0].id
 }
 
 resource "azurerm_lb_probe" "http" {
-  loadbalancer_id = azurerm_lb.helpdesk.id
+  count = var.private_only ? 0 : 1
+
+  loadbalancer_id = azurerm_lb.helpdesk[0].id
   name            = "http-probe"
   protocol        = "Http"
   port            = 80
@@ -372,7 +398,9 @@ resource "azurerm_lb_probe" "http" {
 }
 
 resource "azurerm_lb_rule" "http" {
-  loadbalancer_id                = azurerm_lb.helpdesk.id
+  count = var.private_only ? 0 : 1
+
+  loadbalancer_id                = azurerm_lb.helpdesk[0].id
   name                           = "http-rule"
   protocol                       = "Tcp"
   frontend_port                  = 80
@@ -380,15 +408,17 @@ resource "azurerm_lb_rule" "http" {
   frontend_ip_configuration_name = "PublicIPAddress"
 
   backend_address_pool_ids = [
-    azurerm_lb_backend_address_pool.helpdesk.id
+    azurerm_lb_backend_address_pool.helpdesk[0].id
   ]
 
-  probe_id = azurerm_lb_probe.http.id
+  probe_id = azurerm_lb_probe.http[0].id
 }
 
 # HTTPS korzysta z tych samych serwerow i tego samego publicznego adresu IP.
 resource "azurerm_lb_rule" "https" {
-  loadbalancer_id                = azurerm_lb.helpdesk.id
+  count = var.private_only ? 0 : 1
+
+  loadbalancer_id                = azurerm_lb.helpdesk[0].id
   name                           = "https-rule"
   protocol                       = "Tcp"
   frontend_port                  = 443
@@ -396,10 +426,10 @@ resource "azurerm_lb_rule" "https" {
   frontend_ip_configuration_name = "PublicIPAddress"
 
   backend_address_pool_ids = [
-    azurerm_lb_backend_address_pool.helpdesk.id
+    azurerm_lb_backend_address_pool.helpdesk[0].id
   ]
 
-  probe_id = azurerm_lb_probe.http.id
+  probe_id = azurerm_lb_probe.http[0].id
 }
 
 
@@ -439,6 +469,8 @@ resource "azurerm_lb_rule" "internal_https" {
 # Osobna nazwa operatora pozwala zostawic formularz na publicznym adresie.
 # Publicznie panel nadal zwraca 403, a host operatora kieruje te nazwe przez VPN.
 resource "azurerm_traffic_manager_profile" "operator" {
+  count = var.private_only ? 0 : 1
+
   name                   = "tm-helpdesk-operator"
   resource_group_name    = azurerm_resource_group.main.name
   traffic_routing_method = "Priority"
@@ -456,9 +488,11 @@ resource "azurerm_traffic_manager_profile" "operator" {
 }
 
 resource "azurerm_traffic_manager_azure_endpoint" "operator" {
+  count = var.private_only ? 0 : 1
+
   name               = "public-helpdesk-endpoint"
-  profile_id         = azurerm_traffic_manager_profile.operator.id
-  target_resource_id = azurerm_public_ip.lb.id
+  profile_id         = azurerm_traffic_manager_profile.operator[0].id
+  target_resource_id = azurerm_public_ip.lb[0].id
   priority           = 1
 }
 

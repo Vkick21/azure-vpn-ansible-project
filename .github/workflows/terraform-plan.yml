@@ -1,0 +1,60 @@
+name: Terraform plan from Azure runner
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-production
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: [self-hosted, linux, vkickhamster-mgmt]
+    env:
+      ARM_USE_AZUREAD: "true"
+      ARM_USE_CLI: "true"
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_VAR_helpdesk_dns_label: ${{ vars.TF_VAR_HELPDESK_DNS_LABEL }}
+      TF_VAR_operator_dns_label: ${{ vars.TF_VAR_OPERATOR_DNS_LABEL }}
+      TF_VAR_private_only: ${{ vars.TF_VAR_PRIVATE_ONLY }}
+      TF_VAR_additional_key_vault_admin_object_ids: ${{ vars.TF_VAR_KEY_VAULT_ADMIN_OBJECT_IDS }}
+      TF_VAR_ssh_public_key_path: ${{ github.workspace }}/.ci/id_ed25519.pub
+      TF_SSH_PUBLIC_KEY: ${{ vars.TF_SSH_PUBLIC_KEY }}
+
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v7
+
+      - name: Zaloguj Managed Identity
+        run: az login --identity --output none
+
+      - name: Zainstaluj Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.6
+          terraform_wrapper: false
+
+      - name: Przygotuj niezmieniony klucz deklarowany przez Terraform
+        run: |
+          mkdir -p .ci
+          printf '%s\n' "$TF_SSH_PUBLIC_KEY" > .ci/id_ed25519.pub
+
+      - name: Sprawdz format i konfiguracje
+        run: |
+          terraform fmt -check -recursive
+          terraform init -reconfigure -backend-config="use_azuread_auth=true"
+          terraform validate
+
+      - name: Pokaz plan bez wdrazania
+        run: terraform plan -no-color | tee terraform-plan.txt
+
+      - name: Zachowaj czytelny plan
+        uses: actions/upload-artifact@v6
+        with:
+          name: terraform-plan-text
+          path: terraform-plan.txt
+          retention-days: 7

@@ -57,3 +57,15 @@ variable "operator_dns_label" {
   description = "DNS label for the operator endpoint in Traffic Manager"
   type        = string
 }
+
+variable "private_only" {
+  description = "Udostepnia caly Helpdesk tylko przez VPN i jeden prywatny Load Balancer"
+  type        = bool
+  default     = false
+}
+
+variable "additional_key_vault_admin_object_ids" {
+  description = "Dodatkowe tozsamosci Terraform, ktore musza zachowac dostep do sekretow"
+  type        = set(string)
+  default     = []
+}

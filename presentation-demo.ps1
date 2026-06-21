@@ -173,9 +173,10 @@ Write-DemoStep `
     -Title "Kontrola kosztow" `
     -Explanation "Plan oszczedny pokazuje usuniecie Bastiona i VPN Gateway, ale nie wykonuje zmian." `
     -Commands @(
+        ".\env.ps1 -Action private-plan",
         ".\env.ps1 -Action cost-plan"
     ) `
-    -Expected "Terraform pokazuje plan oszczednosci bez wykonania apply."
+    -Expected "Terraform pokazuje wariant prywatny i oszczednosci bez wykonania apply."
 
 Write-DemoStep `
     -Number 11 `

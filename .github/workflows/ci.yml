@@ -48,6 +48,11 @@ jobs:
       - name: Validate Terraform
         run: terraform validate
 
+      - name: Validate bootstrap Terraform
+        run: |
+          terraform -chdir=bootstrap init -backend=false
+          terraform -chdir=bootstrap validate
+
   ansible:
     name: Ansible
     runs-on: ubuntu-latest
@@ -72,6 +77,7 @@ jobs:
         run: |
           for playbook in \
             backup-postgresql.yml \
+            authorize-management-runner.yml \
             deploy-code-only.yml \
             deploy-helpdesk.yml \
             https.yml \

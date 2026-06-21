@@ -1,0 +1,28 @@
+#cloud-config
+package_update: true
+packages:
+  - ansible
+  - ca-certificates
+  - curl
+  - git
+  - gnupg
+  - jq
+  - python3-pip
+  - python3-venv
+  - unzip
+
+users:
+  - default
+  - name: actions
+    gecos: GitHub Actions Runner
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+
+runcmd:
+  # Runner i Azure CLI sa instalowane po utworzeniu VM, bez tokenow w Terraform.
+  - mkdir -p /opt/actions-runner /opt/vkickhamster
+  - chown -R actions:actions /opt/actions-runner /opt/vkickhamster
+  - printf '10.10.1.10\t${helpdesk_fqdn}\t# VKICKHAMSTER private service\n' >> /etc/hosts
+  - printf '10.10.1.10\t${operator_fqdn}\t# VKICKHAMSTER private service\n' >> /etc/hosts
+  - systemctl enable --now ssh
