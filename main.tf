@@ -45,6 +45,7 @@ resource "azurerm_network_interface" "helpdesk01" {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.app.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = var.private_only ? azurerm_public_ip.app_outbound[0].id : null
   }
 }
 
@@ -263,6 +264,7 @@ resource "azurerm_network_interface" "helpdesk02" {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.app.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = var.private_only ? azurerm_public_ip.app_outbound[1].id : null
   }
 }
 
@@ -323,9 +325,9 @@ resource "azurerm_public_ip" "lb" {
 
 # Jeden adres sluzy tylko jako SNAT. Nie ma na nim publicznych regul przychodzacych.
 resource "azurerm_public_ip" "app_outbound" {
-  count = var.private_only ? 1 : 0
+  count = var.private_only ? 2 : 0
 
-  name                = "pip-helpdesk-outbound"
+  name                = count.index == 0 ? "pip-helpdesk-outbound" : "pip-helpdesk02-outbound"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   allocation_method   = "Static"
@@ -361,14 +363,6 @@ resource "azurerm_lb" "operator" {
     private_ip_address            = "10.10.1.10"
   }
 
-  dynamic "frontend_ip_configuration" {
-    for_each = var.private_only ? [1] : []
-
-    content {
-      name                 = "OutboundPublicIPAddress"
-      public_ip_address_id = azurerm_public_ip.app_outbound[0].id
-    }
-  }
 }
 
 resource "azurerm_lb_backend_address_pool" "operator" {
@@ -495,21 +489,6 @@ resource "azurerm_lb_rule" "internal_https" {
   ]
 
   probe_id = azurerm_lb_probe.operator_http.id
-}
-
-# Outbound rule zapewnia aktualizacje, Key Vault i Storage bez publicznego wejscia.
-resource "azurerm_lb_outbound_rule" "app" {
-  count = var.private_only ? 1 : 0
-
-  name                     = "app-outbound-rule"
-  loadbalancer_id          = azurerm_lb.operator.id
-  protocol                 = "All"
-  backend_address_pool_id  = azurerm_lb_backend_address_pool.operator.id
-  allocated_outbound_ports = 1024
-
-  frontend_ip_configuration {
-    name = "OutboundPublicIPAddress"
-  }
 }
 
 # Osobna nazwa operatora pozwala zostawic formularz na publicznym adresie.
