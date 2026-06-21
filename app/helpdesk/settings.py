@@ -41,6 +41,10 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
+# Szablony uzywaja pelnych adresow, bo formularz i panel maja osobne domeny.
+PUBLIC_BASE_URL = os.getenv("HELPDESK_PUBLIC_URL", "").rstrip("/")
+OPERATOR_BASE_URL = os.getenv("HELPDESK_OPERATOR_URL", "").rstrip("/")
+
 # Publiczny klucz trafia do HTML, a prywatny pozostaje w Azure Key Vault.
 RECAPTCHA_ENABLED = os.getenv("RECAPTCHA_ENABLED", "false").lower() == "true"
 RECAPTCHA_SITE_KEY = os.getenv("RECAPTCHA_SITE_KEY", "")
@@ -90,6 +94,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "tickets.context_processors.service_urls",
             ],
         },
     },

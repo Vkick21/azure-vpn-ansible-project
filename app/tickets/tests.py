@@ -11,6 +11,17 @@ from .models import Comment, Ticket
 
 
 class TicketViewsTests(TestCase):
+    @override_settings(
+        PUBLIC_BASE_URL="https://public.example.com",
+        OPERATOR_BASE_URL="https://operator.example.com",
+    )
+    def test_public_form_links_to_separate_operator_domain(self):
+        response = self.client.get(reverse("ticket-create"))
+        self.assertContains(
+            response,
+            'href="https://operator.example.com/operator/"',
+        )
+
     def test_health_checks_database(self):
         response = self.client.get(reverse("health"))
         self.assertEqual(response.status_code, 200)
@@ -93,6 +104,12 @@ class OperatorPanelTests(TestCase):
             response,
             f"{reverse('operator-login')}?next={reverse('operator-ticket-list')}",
         )
+
+    @override_settings(PUBLIC_BASE_URL="https://public.example.com")
+    def test_operator_new_ticket_link_uses_public_domain(self):
+        self.client.force_login(self.operator)
+        response = self.client.get(reverse("operator-ticket-list"))
+        self.assertContains(response, 'href="https://public.example.com/"')
 
     def test_user_without_staff_role_is_forbidden(self):
         self.client.force_login(self.regular_user)

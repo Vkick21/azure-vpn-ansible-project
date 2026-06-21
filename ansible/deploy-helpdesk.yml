@@ -103,6 +103,8 @@
           Environment=AZURE_STORAGE_ACCOUNT={{ storage_account_name }}
           Environment=DJANGO_ALLOWED_HOSTS={{ helpdesk_domain }},{{ operator_domain }},{{ load_balancer_ip }},10.10.1.4,10.10.1.5,localhost,127.0.0.1
           Environment=DJANGO_CSRF_TRUSTED_ORIGINS=https://{{ helpdesk_domain }},https://{{ operator_domain }}
+          Environment=HELPDESK_PUBLIC_URL=https://{{ helpdesk_domain }}
+          Environment=HELPDESK_OPERATOR_URL=https://{{ operator_domain }}
           Environment=DJANGO_HTTPS_ENABLED=true
           Environment=ENTRA_TENANT_ID={{ entra_tenant_id }}
           Environment=ENTRA_CLIENT_ID={{ entra_client_id }}
