@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   plan:
+    environment: production
     runs-on: [self-hosted, linux, vkickhamster-mgmt]
     env:
       ARM_USE_AZUREAD: "true"
