@@ -52,7 +52,9 @@ jobs:
           terraform validate
 
       - name: Pokaz plan bez wdrazania
-        run: terraform plan -no-color | tee terraform-plan.txt
+        run: |
+          set -o pipefail
+          terraform plan -no-color | tee terraform-plan.txt
 
       - name: Zachowaj czytelny plan
         uses: actions/upload-artifact@v6
