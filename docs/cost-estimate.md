@@ -2,31 +2,28 @@
 
 Region referencyjny: West Europe
 
-## Szacunek miesięczny
+## Aktualny zakres kalkulacji
 
-Na podstawie kalkulatora Microsoft Azure przyjęto koszt około **353,34 USD miesięcznie** i **4 240,05 USD rocznie** dla środowiska działającego przez 730 godzin miesięcznie. Kwota jest orientacyjna i zależy od cennika subskrypcji, transferu, liczby logów oraz czasu pracy zasobów.
+Finalna architektura obejmuje:
 
-Kalkulacja obejmuje trzy maszyny `Standard_B1s` z systemem Linux i trzema dyskami S4, Azure Bastion Basic, VPN Gateway VpnGw1AZ, konto Storage, Azure Monitor oraz dwa moduły Azure Load Balancer.
+- cztery oszczędne maszyny `Standard_B1s`: dwa serwery Django, PostgreSQL i host zarządzający;
+- cztery dyski zarządzane;
+- Azure VPN Gateway `VpnGw1AZ`;
+- jeden prywatny Azure Load Balancer;
+- trzy publiczne adresy IP: jeden dla VPN Gateway i dwa wyłącznie do ruchu wychodzącego backendów;
+- Azure Storage, Key Vault, Azure Monitor i Log Analytics.
 
-Największe składniki kosztu:
+W środowisku nie działają Azure Bastion, Traffic Manager ani publiczny Load Balancer. Formularz i panel operatora są dostępne tylko po VPN.
 
-| Usługa | Znaczenie w kosztorysie |
-|---|---|
-| Azure Bastion | wysoki koszt stały |
-| VPN Gateway | wysoki koszt stały |
-| Virtual Machines B1s | niski koszt obliczeń |
-| Storage | koszt zależny od danych i operacji |
-| Log Analytics | koszt zależny od ilości logów |
-| Key Vault | niski koszt operacji |
-| Load Balancer i transfer | zależne od użycia |
+Poprzednia kwota `353,34 USD` miesięcznie dotyczyła starszej architektury i nie jest aktualnym kosztem finalnego rozwiązania. Dokładną wartość należy ponownie wyeksportować z kalkulatora Azure, ponieważ zależy ona od bieżącego cennika, liczby godzin pracy VM, transferu i ilości logów.
 
 ## Najważniejsze wnioski
 
-1. Bastion i VPN Gateway generują większość kosztu stałego.
-2. Wyłączenie VM ogranicza koszt obliczeń, ale nie zatrzymuje naliczania za Bastion i VPN Gateway.
-3. Trzy VM `Standard_B1s` są oszczędnym wyborem dla środowiska demonstracyjnego.
-4. Usunięcie Bastiona poza prezentacjami daje największą oszczędność, ale pozostawia administrację zależną od VPN.
-5. VPN Gateway jest wymagany dla prywatnego panelu operatora.
+1. VPN Gateway pozostaje największym wymaganym kosztem stałym.
+2. Usunięcie Bastiona, publicznego Load Balancera i Traffic Managera ograniczyło koszt oraz powierzchnię ataku.
+3. VM `Standard_B1s` są oszczędnym wyborem dla środowiska demonstracyjnego.
+4. Host zarządzający można deallokować poza wdrożeniami; zatrzymanie VM nie usuwa ich dysków.
+5. Publiczne adresy backendów służą tylko do SNAT. NSG nie dopuszcza publicznego ruchu przychodzącego.
 
 ## Raport rzeczywisty
 
@@ -37,21 +34,8 @@ cd C:\Projects\terraform
 .\azure-cost-report.ps1
 ```
 
-Skrypt zapisuje pliki CSV w `docs/costs/`. Ten katalog jest ignorowany przez Git. Skrypt używa bieżącej sesji Azure CLI, a token pozostaje wyłącznie w pamięci procesu.
+Skrypt zapisuje pliki CSV w `docs/costs/`. Katalog jest ignorowany przez Git, a token Azure CLI pozostaje w pamięci procesu.
 
-## Demonstracja trybu oszczednego
+## Demonstracja kontroli kosztów
 
-Polecenie ponizej generuje tylko plan usuniecia Bastiona. VPN pozostaje wymagany i aktywny. Polecenie nie wykonuje zadnej zmiany w Azure:
-
-```powershell
-.\env.ps1 -Action cost-plan
-```
-
-Plan docelowej architektury prywatnej usuwa publiczny LB, publiczny adres
-aplikacji, Traffic Manager i Bastion, ale zachowuje VPN oraz dane:
-
-```powershell
-.\env.ps1 -Action private-plan
-```
-
-Na prezentacji nalezy pokazac podsumowanie planu, a nastepnie przerwac na etapie przed `terraform apply`. Zatrzymanie trzech VM przez `.\env.ps1 -Action stop` jest osobna operacja i nie usuwa dyskow ani danych PostgreSQL.
+Status lub deallokację hosta zarządzającego można wykonać workflow `management-vm-control.yml`. Plan Terraform jest generowany przez GitHub Actions i nie wprowadza zmian bez osobno zatwierdzonego kroku `apply`.

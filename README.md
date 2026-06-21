@@ -127,7 +127,7 @@ Workflow `terraform-apply.yml` wymaga jawnego potwierdzenia. Każde wdrożenie m
 Test składni Ansible:
 
 ```powershell
-wsl bash -lc "cd /mnt/c/Projects/terraform/ansible && ansible-playbook -i inventory.ini verify-helpdesk.yml --syntax-check"
+gh workflow run ansible-deploy.yml -f playbook=verify-helpdesk.yml
 ```
 
 Aktualizacja kosztorysu:

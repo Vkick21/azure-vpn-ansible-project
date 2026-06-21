@@ -1,25 +1,24 @@
 # Plan optymalizacji kosztow
 
-Punkt odniesienia z kalkulatora projektu wynosi 353,34 USD miesiecznie przy
-pracy przez 730 godzin. Najwieksze stale pozycje to Bastion i VPN Gateway.
+Punkt odniesienia 353,34 USD miesięcznie dotyczył poprzedniej architektury.
+W finalnym rozwiązaniu Bastion został usunięty, a największą stałą pozycją
+pozostaje wymagany VPN Gateway.
 
 ## Zmiany docelowe
 
 | Zmiana | Wplyw |
 |---|---|
-| Usuniecie Azure Bastion | Najwieksza oszczednosc, okolo 138,70 USD wedlug obecnego kosztorysu |
-| Jeden prywatny Load Balancer | Mniej regul i brak publicznego modulu LB |
-| Usuniecie publicznego IP aplikacji | Mniejszy koszt i brak publicznej powierzchni ataku |
-| Usuniecie Traffic Manager | Uproszczenie DNS po przejsciu na prywatne mapowanie |
-| Runner Standard_B1s | Niski koszt, szczegolnie przy deallokacji poza wdrozeniami |
-| VPN Gateway pozostaje | Koszt wymagany przez nowe kryterium dostepu |
+| Usunięty Azure Bastion | Ograniczenie wysokiego kosztu stałego |
+| Jeden prywatny Load Balancer | Brak publicznego modułu LB |
+| Usunięty Traffic Manager | Prostsza architektura DNS |
+| Dwa outbound-only public IP | Zapewniają aktualizacje i dostęp do usług Azure bez publicznego wejścia |
+| Runner Standard_B1s | Niski koszt, szczególnie przy deallokacji poza wdrożeniami |
+| VPN Gateway pozostaje | Koszt wymagany przez dostęp wyłącznie po VPN |
 | Log Analytics 30 dni | Ograniczenie kosztu przechowywania i pozyskiwania logow |
 
-Samo odjecie Bastiona i dodanie stale dzialajacego B1s daje konserwatywny
-poziom ponizej okolo 225 USD miesiecznie przed uwzglednieniem dalszych
-oszczednosci na publicznym LB. Runner uruchamiany tylko na czas workflow obniza
-koszt compute jeszcze bardziej. Po migracji trzeba ponownie wyeksportowac
-kalkulacje Azure, bo ceny i transfer zaleza od subskrypcji.
+Po migracji należy ponownie wyeksportować kalkulację Azure. Nie należy podawać
+starej sumy jako kosztu finalnego, ponieważ zmieniła się liczba VM, Load
+Balancerów i publicznych adresów IP.
 
 ## Sterowanie runnerem
 

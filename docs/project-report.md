@@ -2,7 +2,7 @@
 
 ## 1. Cel projektu
 
-Celem projektu było przygotowanie funkcjonalnego środowiska Helpdesk w Microsoft Azure. Rozwiązanie miało łączyć publiczną usługę WWW, prywatny dostęp administracyjny przez VPN, automatyzację infrastruktury, bazę danych, kopie zapasowe i podstawowe mechanizmy bezpieczeństwa.
+Celem projektu było przygotowanie funkcjonalnego środowiska Helpdesk w Microsoft Azure. Rozwiązanie łączy dostęp do usługi wyłącznie przez VPN, automatyzację infrastruktury, bazę danych, kopie zapasowe i podstawowe mechanizmy bezpieczeństwa.
 
 Projekt został przygotowany jako środowisko demonstracyjne, ale wykorzystuje rozwiązania spotykane w systemach produkcyjnych: Infrastructure as Code, segmentację sieci, wysoką dostępność warstwy aplikacyjnej, Managed Identity, Key Vault i centralny monitoring.
 
@@ -28,14 +28,13 @@ Projekt został przygotowany jako środowisko demonstracyjne, ale wykorzystuje r
 
 ```mermaid
 flowchart LR
-    Internet["Użytkownik Internetu"] --> PublicLB["Publiczny Load Balancer"]
-    VPNUser["Operator"] --> VPN["Azure VPN Gateway"]
+    VPNUser["Użytkownik lub operator"] --> VPN["Azure VPN Gateway"]
     VPN --> PrivateLB["Prywatny Load Balancer 10.10.1.10"]
-    Bastion["Azure Bastion"] --> App1["helpdesk01"]
-    PublicLB --> App1
-    PublicLB --> App2["helpdesk02"]
     PrivateLB --> App1
     PrivateLB --> App2["helpdesk02"]
+    Runner["GitHub Actions runner 10.10.2.10"] --> App1["helpdesk01"]
+    Runner --> App2
+    Runner --> DB
     App1 --> DB["PostgreSQL 10.10.5.4"]
     App2 --> DB
     App1 --> Storage["Azure Storage"]
@@ -47,7 +46,7 @@ flowchart LR
     Entra --> App2
 ```
 
-Warstwa aplikacyjna składa się z dwóch małych VM `Standard_B1s`. Publiczny Load Balancer obsługuje formularz zgłoszeniowy, a oddzielny prywatny Load Balancer udostępnia panel operatora użytkownikom połączonym przez VPN.
+Warstwa aplikacyjna składa się z dwóch małych VM `Standard_B1s` za jednym prywatnym Load Balancerem. Formularz i panel operatora są dostępne po zestawieniu VPN. Osobna VM `Standard_B1s` w podsieci zarządzania pełni rolę prywatnego runnera GitHub Actions dla Terraform i Ansible.
 
 PostgreSQL działa na osobnej VM `Standard_B1s` w dedykowanej podsieci. Serwer bazy nie ma publicznego adresu IP.
 
@@ -58,8 +57,8 @@ PostgreSQL działa na osobnej VM `Standard_B1s` w dedykowanej podsieci. Serwer b
 | VNet | 10.10.0.0/16 |
 | Aplikacja | 10.10.1.0/24 |
 | Zarządzanie | 10.10.2.0/24 |
-| GatewaySubnet | 10.10.3.0/27 |
-| AzureBastionSubnet | 10.10.4.0/26 |
+| GatewaySubnet | 10.10.3.0/24 |
+| Zarezerwowana podsieć | 10.10.4.0/26 |
 | Baza danych | 10.10.5.0/24 |
 | Klienci VPN | 172.20.200.0/24 |
 
@@ -69,15 +68,14 @@ PostgreSQL działa na osobnej VM `Standard_B1s` w dedykowanej podsieci. Serwer b
 
 NSG warstwy aplikacyjnej realizuje następujące zasady:
 
-- SSH tylko z puli VPN i podsieci Bastiona;
-- HTTP/HTTPS z Internetu dla publicznego formularza;
-- HTTP/HTTPS z VPN dla panelu operatora;
+- SSH tylko z puli VPN i hosta zarządzającego;
+- HTTP/HTTPS wyłącznie z VPN przez prywatny Load Balancer;
 - sonda Azure Load Balancer na porcie 80;
 - PostgreSQL wychodzący wyłącznie do `10.10.5.4:5432`;
 - ruch WWW wychodzący tylko na portach 80/443;
 - blokada pozostałej komunikacji bocznej w VNet.
 
-NSG bazy danych zezwala na PostgreSQL wyłącznie z podsieci aplikacji oraz na SSH z VPN/Bastionu. Pozostały ruch inicjowany z VNet jest blokowany.
+NSG bazy danych zezwala na PostgreSQL wyłącznie z podsieci aplikacji oraz na SSH z VPN lub hosta zarządzającego. Pozostały ruch inicjowany z VNet jest blokowany.
 
 Szczegóły znajdują się w `docs/network-security.md`.
 
@@ -85,15 +83,15 @@ Szczegóły znajdują się w `docs/network-security.md`.
 
 Azure VPN Gateway udostępnia połączenie Point-to-Site z uwierzytelnianiem certyfikatem. Klient otrzymuje adres z puli `172.20.200.0/24`.
 
-Publiczny DNS wskazuje publiczny Load Balancer. Komputer operatora po zestawieniu VPN mapuje tę samą nazwę na prywatny adres `10.10.1.10`. Pozwala to zachować prawidłową nazwę certyfikatu HTTPS i URI callbacku Entra ID.
+Komputer użytkownika po zestawieniu VPN mapuje nazwę usługi na prywatny adres `10.10.1.10`. Pozwala to zachować prawidłową nazwę certyfikatu HTTPS i URI callbacku Entra ID bez wystawiania Helpdesk do Internetu.
 
 Ansible automatyzuje dodanie konta do grupy operatorów Microsoft Entra ID. Dostęp sieciowy do panelu wymaga wcześniej przygotowanego hosta operatora z zainstalowanym profilem Azure VPN Client oraz certyfikatem klienta. Podczas prezentacji połączenie VPN jest zestawiane z takiego zdalnego hosta.
 
-Nginx dodatkowo blokuje publiczny dostęp do `/operator/`, `/oidc/` i `/admin/`. Samo poznanie adresu panelu nie wystarcza do jego otwarcia.
+Brak publicznego frontendu Load Balancera i reguł NSG z Internetu blokuje dostęp do całej usługi bez VPN. Samo poznanie nazwy panelu nie wystarcza do jego otwarcia.
 
 ## 7. Aplikacja Helpdesk
 
-Publiczny formularz umożliwia podanie adresu e-mail, tytułu, opisu, priorytetu i załącznika. Przed zapisem użytkownik potwierdza pole Google reCAPTCHA v2, co ogranicza automatyczne wysyłanie zgłoszeń. Token jest sprawdzany po stronie Django, a prywatny klucz reCAPTCHA pozostaje w Azure Key Vault. Zgłoszenie jest zapisywane w PostgreSQL, a załącznik trafia do prywatnego kontenera Azure Storage.
+Formularz dostępny po VPN umożliwia podanie adresu e-mail, tytułu, opisu, priorytetu i załącznika. Przed zapisem użytkownik potwierdza pole Google reCAPTCHA v2, co ogranicza automatyczne wysyłanie zgłoszeń. Token jest sprawdzany po stronie Django, a prywatny klucz reCAPTCHA pozostaje w Azure Key Vault. Zgłoszenie jest zapisywane w PostgreSQL, a załącznik trafia do prywatnego kontenera Azure Storage.
 
 Panel operatora umożliwia:
 
@@ -125,6 +123,8 @@ Nginx obsługuje HTTPS z certyfikatem Let's Encrypt. Jeden backend odnawia certy
 
 Terraform zarządza zasobami Azure i stanem zdalnym. Ansible odpowiada za instalację oraz konfigurację Nginx, Django, PostgreSQL, HTTPS i backupu.
 
+Oba narzędzia są uruchamiane przez GitHub Actions na prywatnym runnerze w Azure. Dzięki temu komputer prezentującego nie wymaga WSL, a runner ma prywatną łączność z serwerami.
+
 Najważniejsze zasady automatyzacji:
 
 - plan Terraform jest analizowany przed wdrożeniem;
@@ -139,8 +139,8 @@ Po wdrożeniu wykonano następujące testy:
 
 | Test | Wynik |
 |---|---|
-| Publiczny formularz HTTPS | 200 |
-| Publiczny panel operatora | 403 |
+| Helpdesk bez VPN | niedostępny |
+| Formularz HTTPS przez VPN | poprawny |
 | Panel operatora przez VPN | 302 do logowania |
 | Entra ID przez VPN | 302 do Microsoft Login |
 | SSH/Ansible do wszystkich VM | poprawny |
@@ -157,9 +157,9 @@ Testy sieciowe po zmianach NSG nie wprowadzały danych do produkcyjnej bazy.
 
 ## 12. Kosztorys
 
-Szacowany koszt pracy środowiska przez cały miesiąc wynosi około `353,34 USD`, a koszt roczny około `4 240,05 USD`. Kalkulacja zakłada 730 godzin działania i obejmuje trzy maszyny B1s z trzema dyskami S4, Azure Bastion, VPN Gateway, Storage, Azure Monitor oraz dwa Load Balancery.
+Starszy kosztorys `353,34 USD` miesięcznie nie opisuje finalnej architektury. Aktualna kalkulacja powinna obejmować cztery maszyny B1s, cztery dyski, VPN Gateway, jeden prywatny Load Balancer, trzy publiczne IP, Storage i Monitor. Nie obejmuje już Bastiona, Traffic Managera ani publicznego Load Balancera.
 
-Największe składniki kosztu to Azure Bastion i VPN Gateway. VM `Standard_B1s` pozostają oszczędne, jednak zatrzymanie VM nie zatrzymuje opłat za bramę i Bastion.
+Największym wymaganym kosztem stałym pozostaje VPN Gateway. VM `Standard_B1s` są oszczędne, a host zarządzający może zostać deallokowany poza wdrożeniami.
 
 Metoda przygotowania kosztorysu znajduje się w `docs/cost-estimate.md`. Dane CSV są generowane lokalnie i ignorowane przez Git.
 
@@ -167,7 +167,7 @@ Metoda przygotowania kosztorysu znajduje się w `docs/cost-estimate.md`. Dane CS
 
 - brak dedykowanej domeny; używana jest bezpłatna nazwa Azure;
 - brak Azure Firewall/NVA, dlatego routing opiera się na trasach systemowych i NSG;
-- Bastion i VPN Gateway generują wysoki koszt stały;
+- VPN Gateway generuje wymagany koszt stały;
 - PostgreSQL działa na pojedynczej VM i nie zapewnia wysokiej dostępności bazy;
 - system powiadomień e-mail nie został jeszcze dodany;
 - raport kosztów wymaga aktywnej sesji Azure CLI.
@@ -176,10 +176,10 @@ Możliwe rozszerzenia to powiadomienia e-mail, SLA zgłoszeń, historia audytowa
 
 ## 14. Podsumowanie
 
-Projekt realizuje kompletny przepływ: publiczny użytkownik wysyła zgłoszenie, dane trafiają do PostgreSQL i Azure Storage, a operator po VPN loguje się przez Entra ID i obsługuje zgłoszenie. Infrastruktura, konfiguracja, bezpieczeństwo, kopie zapasowe i kosztorys są odtwarzalne z repozytorium.
+Projekt realizuje kompletny przepływ: użytkownik po VPN wysyła zgłoszenie, dane trafiają do PostgreSQL i Azure Storage, a uprawniony operator loguje się przez Entra ID i obsługuje zgłoszenie. Infrastruktura, konfiguracja, bezpieczeństwo i kopie zapasowe są odtwarzalne z repozytorium.
 
 ## 15. Demonstracja dzialajacego projektu
 
-Podczas prezentacji system moze zostac pokazany jako aktywne srodowisko, a nie statyczny zestaw plikow. Autor moze wyslac publiczne zgloszenie, polaczyc VPN, zalogowac operatora przez Entra ID, obsluzyc ticket oraz pokazac plan kontroli kosztow.
+Podczas prezentacji system może zostać pokazany jako aktywne środowisko. Autor zestawia VPN, wysyła zgłoszenie, loguje operatora przez Entra ID, obsługuje ticket, uruchamia weryfikację Ansible w GitHub Actions i pokazuje plan Terraform zakończony komunikatem `No changes`.
 
-Polecenie `.\env.ps1 -Action cost-plan` przedstawia plan usuniecia Bastiona i VPN Gateway bez wykonywania `terraform apply`. Polecenia `.\env.ps1 -Action stop` i `.\env.ps1 -Action start` zarzadzaja stanem trzech VM w bezpiecznej kolejnosci. Operatorami mozna zarzadzac idempotentnym playbookiem `ansible/manage-operator.yml`.
+Workflow `management-vm-control.yml` pokazuje kontrolę kosztów przez status, uruchomienie lub deallokację VM runnera. Operatorami można zarządzać idempotentnym playbookiem `ansible/manage-operator.yml`. Żaden krok prezentacyjny nie wykonuje `terraform apply` bez osobnej zgody i zatwierdzenia.
