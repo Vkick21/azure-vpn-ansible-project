@@ -2,6 +2,15 @@ name: Terraform plan from Azure runner
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Wybierz wariant planu
+        required: true
+        type: choice
+        default: current
+        options:
+          - current
+          - private-only
 
 permissions:
   contents: read
@@ -21,7 +30,7 @@ jobs:
       TF_INPUT: "false"
       TF_VAR_helpdesk_dns_label: ${{ vars.TF_VAR_HELPDESK_DNS_LABEL }}
       TF_VAR_operator_dns_label: ${{ vars.TF_VAR_OPERATOR_DNS_LABEL }}
-      TF_VAR_private_only: ${{ vars.TF_VAR_PRIVATE_ONLY }}
+      TF_VAR_private_only: ${{ inputs.mode == 'private-only' && 'true' || vars.TF_VAR_PRIVATE_ONLY }}
       TF_VAR_additional_key_vault_admin_object_ids: ${{ vars.TF_VAR_KEY_VAULT_ADMIN_OBJECT_IDS }}
       TF_VAR_ssh_public_key_path: ${{ github.workspace }}/.ci/id_ed25519.pub
       TF_VAR_vpn_root_certificate_base64: ${{ vars.TF_VPN_ROOT_CERTIFICATE_BASE64 }}
