@@ -205,6 +205,17 @@ resource "azurerm_network_security_group" "app" {
     destination_address_prefix = "AzureCloud"
   }
   security_rule {
+    name                       = "AllowKeyVaultHTTPSOutbound"
+    priority                   = 2030
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "*"
+    destination_address_prefix = "AzureKeyVault"
+  }
+  security_rule {
     name                       = "DenyOtherVnetOutbound"
     priority                   = 4091
     direction                  = "Outbound"
