@@ -1,49 +1,71 @@
 VKICKHAMSTER Helpdesk - pliki dodatkowe
 =======================================
 
-Archiwum zawiera niewrazliwa kopie kodu i dokumentacji projektu.
+Autor: Jan Michalak
+E-mail akademicki: 110997@student.san.edu.pl
+Repozytorium: https://github.com/Vkick21/azure-vpn-ansible-project
 
-Najwazniejsze katalogi i pliki:
+Pakiet zawiera niewrazliwa kopie kodu, konfiguracji i dokumentacji projektu.
+Finalna usluga Helpdesk jest dostepna wylacznie po polaczeniu VPN.
 
-1. Pliki *.tf
-   Definicje infrastruktury Microsoft Azure przygotowane w Terraform.
+Zawartosc pakietu
+-----------------
 
-2. ansible/
-   Inventory, playbooki wdrozenia Django, PostgreSQL, HTTPS, backupu,
-   testow oraz zarzadzania operatorami Microsoft Entra ID.
+1. Terraform/
+   Definicje infrastruktury Azure: VNet, podsieci, NSG, trzy VM robocze,
+   jeden prywatny Load Balancer, VPN Gateway, Storage, Key Vault i monitoring.
+   Podkatalog bootstrap opisuje osobna VM ansible-mgmt.
 
-3. app/
-   Kod aplikacji Django Helpdesk, formularz publiczny z reCAPTCHA v2,
-   panel operatora oraz testy jednostkowe.
+2. Ansible/
+   Inventory i playbooki konfigurujace Django, PostgreSQL, Nginx, HTTPS,
+   backup, testy oraz czlonkostwo operatorow w grupie Microsoft Entra ID.
 
-4. Skrypty *.ps1
-   Sterowanie srodowiskiem, dostep operatora przez VPN, raport kosztow
-   interaktywny przewodnik presentation-demo.ps1 oraz prosty skrypt
-   add-operator-ansible.ps1 dodajacy operatora przez Ansible w WSL.
-   Polaczenie VPN jest demonstrowane z przygotowanego zdalnego hosta.
+3. GitHub-Actions/
+   Workflow Terraform Plan, chroniony Terraform Apply, wdrozenia Ansible,
+   CI oraz uruchamianie i deallokacja VM ansible-mgmt.
 
-5. docs/
-   Opis projektu, bezpieczenstwa sieci, kosztow, Entra ID i wynikow testow.
+4. PowerShell/
+   Skrypty sterowania VM, mapowania prywatnych nazw Helpdesk, zarzadzania
+   operatorami Entra ID, raportu kosztow i eksportu dowodow projektu.
 
-6. .github/workflows/
-   Kontrole CI dla Terraform, Ansible, PowerShell i Django.
+5. Aplikacja-Django/
+   Kod aplikacji Helpdesk, formularz z reCAPTCHA v2, panel operatora,
+   integracja Entra ID, obsluga zalacznikow i testy jednostkowe.
 
-7. config.example.ps1
-   Niewrazliwy szablon konfiguracji lokalnej.
+6. Dokumentacja/
+   Opis architektury, bezpieczenstwa sieci, kosztow, GitHub runnera i testow.
 
-Celowo pominiete dane:
+7. LINKI-ZEWNETRZNE.txt
+   Repozytorium, adresy uslugi oraz oficjalna dokumentacja technologii.
 
-- config.local.ps1;
+Architektura finalna
+--------------------
+
+- dwa serwery Django Standard_B1s;
+- jeden serwer PostgreSQL Standard_B1s;
+- jedna VM ansible-mgmt Standard_B1s jako prywatny runner GitHub Actions;
+- jeden prywatny Azure Load Balancer;
+- Azure VPN Gateway VpnGw1AZ;
+- brak Azure Bastion, Traffic Manager i publicznego Load Balancera;
+- Terraform i Ansible wykonywane z GitHub Actions bez WSL;
+- Terraform Apply wymaga jawnego potwierdzenia.
+
+Celowo pominiete dane
+---------------------
+
+- config.local.ps1 i pliki *.tfvars;
 - stan Terraform i zapisane plany;
-- prywatne certyfikaty, klucze SSH oraz pliki PFX/PEM;
-- sekrety Google reCAPTCHA, Microsoft Entra ID i Django;
-- hasla PostgreSQL i kont administracyjnych;
-- eksporty kosztow zawierajace dane subskrypcji.
+- prywatne certyfikaty, klucze SSH i pliki PFX/PEM;
+- hasla, tokeny oraz sekrety reCAPTCHA, Entra ID, Django i PostgreSQL;
+- lokalne media aplikacji i eksporty kosztow z identyfikatorami subskrypcji;
+- katalog .git i lokalne katalogi robocze narzedzi.
 
-Uruchomienie przewodnika prezentacji:
+Bezpieczna demonstracja
+-----------------------
 
-  cd C:\Projects\terraform
-  .\presentation-demo.ps1
+1. Polacz VPN vnet-helpdesk.
+2. Uruchom runner workflow management-vm-control.yml, akcja start.
+3. Uruchom terraform-plan.yml albo ansible-deploy.yml.
+4. Po demonstracji zdeallokuj runner akcja stop.
 
-Projekt nie wykonuje automatycznie terraform apply. Kazda zmiana
-infrastruktury wymaga osobnej akceptacji i sprawdzenia planu.
+Nie uruchamiaj Terraform Apply bez sprawdzenia planu i osobnej zgody.
