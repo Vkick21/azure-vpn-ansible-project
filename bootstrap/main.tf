@@ -26,15 +26,6 @@ resource "azurerm_resource_group" "management" {
   location = var.location
 }
 
-# Publiczny adres zapewnia tylko tani ruch wychodzacy. NSG nie otwiera SSH z Internetu.
-resource "azurerm_public_ip" "management" {
-  name                = "pip-ansible-mgmt"
-  location            = azurerm_resource_group.management.location
-  resource_group_name = azurerm_resource_group.management.name
-  allocation_method   = "Static"
-  sku                 = "Standard"
-}
-
 resource "azurerm_network_security_group" "management" {
   name                = "nsg-ansible-mgmt"
   location            = azurerm_resource_group.management.location
@@ -75,7 +66,6 @@ resource "azurerm_network_interface" "management" {
     subnet_id                     = data.azurerm_subnet.management.id
     private_ip_address_allocation = "Static"
     private_ip_address            = "10.10.2.10"
-    public_ip_address_id          = azurerm_public_ip.management.id
   }
 }
 

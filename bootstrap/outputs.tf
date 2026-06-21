@@ -6,10 +6,6 @@ output "management_private_ip" {
   value = azurerm_network_interface.management.private_ip_address
 }
 
-output "management_public_ip" {
-  value = azurerm_public_ip.management.ip_address
-}
-
 output "management_identity_principal_id" {
   value = azurerm_linux_virtual_machine.management.identity[0].principal_id
 }

@@ -16,5 +16,5 @@ terraform -chdir=bootstrap plan
 `terraform apply` wymaga osobnej akceptacji. Po utworzeniu VM nalezy polaczyc
 VPN, zalogowac sie przez SSH na `10.10.2.10` i zarejestrowac runner GitHub.
 
-Publiczny adres VM sluzy do polaczen wychodzacych. Domyslne reguly NSG blokuja
-SSH z Internetu, a regula projektu dopuszcza port 22 tylko z puli VPN.
+VM nie ma publicznego adresu IP. Ruch wychodzacy korzysta z ustawienia istniejacej
+podsieci, a regula projektu dopuszcza SSH tylko z puli VPN.
