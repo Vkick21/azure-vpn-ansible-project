@@ -2,31 +2,40 @@
 
 [![CI](https://github.com/Vkick21/azure-vpn-ansible-project/actions/workflows/ci.yml/badge.svg)](https://github.com/Vkick21/azure-vpn-ansible-project/actions/workflows/ci.yml)
 
+## Autor
+
+- Jan Michalak
+- e-mail akademicki: `110997@student.san.edu.pl`
+- Społeczna Akademia Nauk
+
+Szczegóły autorstwa znajdują się również w pliku [`AUTHORS.md`](AUTHORS.md).
+
 Projekt przedstawia kompletny system Helpdesk uruchomiony w Microsoft Azure. Infrastruktura jest zarządzana przez Terraform, konfiguracja serwerów przez Ansible, a aplikacja została napisana w Django i korzysta z PostgreSQL.
 
 ## Najważniejsze funkcje
 
-- publiczny formularz zgłoszenia dostępny przez HTTPS;
-- panel operatora dostępny wyłącznie po VPN;
+- formularz i panel Helpdesk dostępne wyłącznie po VPN;
 - logowanie operatorów przez Microsoft Entra ID;
-- dwa serwery aplikacyjne za publicznym i prywatnym Load Balancerem;
+- dwa serwery aplikacyjne za jednym prywatnym Load Balancerem;
 - prywatny serwer PostgreSQL bez publicznego adresu IP;
+- prywatny runner GitHub Actions `ansible-mgmt` w Azure;
+- Terraform i Ansible uruchamiane z GitHub Actions bez WSL;
 - załączniki i kopie zapasowe w Azure Storage;
 - sekrety przechowywane w Azure Key Vault;
 - automatyczny certyfikat Let's Encrypt;
 - monitoring przez Azure Monitor i Log Analytics;
-- reguły NSG ograniczające ruch między segmentami.
-- ochrona publicznego formularza przez Google reCAPTCHA v2.
+- reguły NSG ograniczające ruch między segmentami;
+- ochrona formularza przez Google reCAPTCHA v2.
 
 ## Dostęp
 
-Publiczny formularz:
+Po połączeniu VPN formularz jest dostępny pod adresem:
 
 ```text
 https://<HELPDESK_FQDN>/
 ```
 
-Panel operatora wymaga aktywnego VPN oraz prywatnego mapowania domeny:
+Formularz i panel operatora wymagają aktywnego VPN oraz prywatnego mapowania domen:
 
 ```powershell
 .\operator-vpn-access.ps1 -Action Add
@@ -38,12 +47,14 @@ Usunięcie mapowania:
 .\operator-vpn-access.ps1 -Action Remove
 ```
 
-Formularz i panel maja osobne nazwy. Mapowanie VPN zmienia tylko adres
-operatora, dlatego publiczny formularz dziala rowniez po odlaczeniu VPN.
+Skrypt mapuje obie nazwy na prywatny Load Balancer `10.10.1.10`.
+Po odłączeniu VPN usługa nie jest dostępna.
 
 ## Struktura repozytorium
 
 - `*.tf` — infrastruktura Azure;
+- `bootstrap/` — osobny stan i konfiguracja VM runnera GitHub Actions;
+- `.github/workflows/` — kontrolowane plany, wdrożenia i playbooki;
 - `ansible/` — konfiguracja Linux, Nginx, Django, PostgreSQL, HTTPS i backup;
 - `app/` — aplikacja Django Helpdesk;
 - `docs/project-report.md` — pełne sprawozdanie techniczne;
@@ -111,7 +122,7 @@ terraform validate
 .\env.ps1 -Action plan
 ```
 
-Projekt nie zakłada automatycznego wykonywania `terraform apply`. Każde wdrożenie powinno zostać poprzedzone przeglądem planu.
+Workflow `terraform-apply.yml` wymaga jawnego potwierdzenia. Każde wdrożenie musi zostać poprzedzone przeglądem planu.
 
 Test składni Ansible:
 
