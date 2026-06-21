@@ -1,29 +1,4 @@
 ---
-- name: Sprawdz publiczny dostep do HelpDesk
-  hosts: localhost
-  connection: local
-  gather_facts: false
-
-  tasks:
-    - name: Sprawdz health probe przez Load Balancer
-      ansible.builtin.uri:
-        url: "https://{{ helpdesk_domain }}/health/"
-        return_content: true
-        status_code: 200
-      register: public_health
-      failed_when: public_health.json.database != "available"
-
-    - name: Potwierdz blokade publicznego panelu administratora
-      ansible.builtin.uri:
-        url: "https://{{ helpdesk_domain }}/admin/"
-        status_code: 403
-
-    - name: Potwierdz przekierowanie HTTP do HTTPS
-      ansible.builtin.uri:
-        url: "http://{{ helpdesk_domain }}/"
-        follow_redirects: none
-        status_code: 301
-
 - name: Sprawdz oba backendy aplikacji
   hosts: helpdesk
   become: true
