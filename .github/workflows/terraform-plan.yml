@@ -24,6 +24,7 @@ jobs:
       TF_VAR_private_only: ${{ vars.TF_VAR_PRIVATE_ONLY }}
       TF_VAR_additional_key_vault_admin_object_ids: ${{ vars.TF_VAR_KEY_VAULT_ADMIN_OBJECT_IDS }}
       TF_VAR_ssh_public_key_path: ${{ github.workspace }}/.ci/id_ed25519.pub
+      TF_VAR_vpn_root_certificate_base64: ${{ vars.TF_VPN_ROOT_CERTIFICATE_BASE64 }}
       TF_SSH_PUBLIC_KEY: ${{ vars.TF_SSH_PUBLIC_KEY }}
 
     steps:

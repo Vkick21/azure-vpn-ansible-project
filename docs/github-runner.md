@@ -28,6 +28,7 @@ W `Settings -> Secrets and variables -> Actions -> Variables` dodaj:
 - `TF_VAR_PRIVATE_ONLY`;
 - `TF_VAR_KEY_VAULT_ADMIN_OBJECT_IDS` jako tablice JSON;
 - `TF_SSH_PUBLIC_KEY` z dotychczasowym kluczem publicznym VM;
+- `TF_VPN_ROOT_CERTIFICATE_BASE64` z publiczna czescia certyfikatu VPN;
 - `HELPDESK_FQDN` i `HELPDESK_OPERATOR_FQDN`;
 - `HELPDESK_PUBLIC_IP`, `HELPDESK_PRIVATE_IP`, `HELPDESK_DATABASE_IP`;
 - `AZURE_STORAGE_ACCOUNT`, `KEY_VAULT_NAME`;

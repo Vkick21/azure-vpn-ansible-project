@@ -567,7 +567,7 @@ resource "azurerm_virtual_network_gateway" "vpn" {
 
     root_certificate {
       name             = "vpn-root"
-      public_cert_data = filebase64("AzureVPNRootCert.cer")
+      public_cert_data = var.vpn_root_certificate_base64 != null ? var.vpn_root_certificate_base64 : filebase64("AzureVPNRootCert.cer")
     }
   }
 }

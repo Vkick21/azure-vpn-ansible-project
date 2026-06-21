@@ -20,6 +20,13 @@ variable "ssh_public_key_path" {
   default     = "C:/Users/janek/.ssh/id_ed25519.pub"
 }
 
+variable "vpn_root_certificate_base64" {
+  description = "Publiczna czesc certyfikatu glownego VPN w formacie Base64"
+  type        = string
+  default     = null
+  nullable    = true
+}
+
 variable "enable_vpn" {
   description = "Create VPN Gateway"
   type        = bool
