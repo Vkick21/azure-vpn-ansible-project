@@ -159,6 +159,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if ! az keyvault show --resource-group rg-helpdesk-prod \
+            --name "$KEY_VAULT_NAME" --output none 2>/dev/null; then
+            terraform state rm azurerm_key_vault.helpdesk || true
+          fi
           mapfile -t RESOURCES < <(terraform state list | grep -vE \
             '^(data\.|azurerm_resource_group\.main$|azurerm_virtual_network\.main$|azurerm_subnet\.|azurerm_key_vault\.helpdesk$|random_string\.storage$)')
           test "${#RESOURCES[@]}" -gt 0
