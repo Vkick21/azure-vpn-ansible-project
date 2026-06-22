@@ -67,13 +67,34 @@ jobs:
           terraform -chdir=bootstrap init -backend=false
           terraform -chdir=bootstrap validate
 
+      - name: Przelacz kopie robocza na puste stany lokalne
+        run: |
+          mv backend.tf backend.tf.remote-disabled
+          mv bootstrap/backend.tf bootstrap/backend.tf.remote-disabled
+          cat > recovery-backend.tf <<'EOF'
+          terraform {
+            backend "local" {
+              path = "/tmp/vkickhamster-recovery-main.tfstate"
+            }
+          }
+          EOF
+          cat > bootstrap/recovery-backend.tf <<'EOF'
+          terraform {
+            backend "local" {
+              path = "/tmp/vkickhamster-recovery-bootstrap.tfstate"
+            }
+          }
+          EOF
+          rm -rf .terraform bootstrap/.terraform
+          terraform init -reconfigure
+          terraform -chdir=bootstrap init -reconfigure
+
       - name: Zaplanuj glowna infrastrukture z pustego stanu
         run: |
           set -o pipefail
           terraform plan \
             -refresh=false \
             -lock=false \
-            -state=/tmp/vkickhamster-recovery-main.tfstate \
             -out=recovery-output/main.tfplan \
             -no-color | tee recovery-output/main-plan.txt
           terraform show -json recovery-output/main.tfplan > recovery-output/main-plan.json
@@ -84,7 +105,6 @@ jobs:
           terraform -chdir=bootstrap plan \
             -refresh=false \
             -lock=false \
-            -state=/tmp/vkickhamster-recovery-bootstrap.tfstate \
             -var="ssh_public_key_path=${{ github.workspace }}/.ci/id_ed25519.pub" \
             -out="${{ github.workspace }}/recovery-output/bootstrap.tfplan" \
             -no-color | tee recovery-output/bootstrap-plan.txt
