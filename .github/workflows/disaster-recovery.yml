@@ -1,0 +1,175 @@
+name: Controlled disaster recovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Wybierz kontrolowany etap
+        required: true
+        type: choice
+        options:
+          - prepare-backup
+          - destroy-workload
+          - recreate-infrastructure
+      confirmation:
+        description: Dla usuwania wpisz DESTROY-WORKLOAD, dla odtworzenia APPLY-RECOVERY
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: disaster-recovery
+  cancel-in-progress: false
+
+jobs:
+  recovery:
+    name: ${{ inputs.phase }}
+    environment: production
+    runs-on: [self-hosted, linux, vkickhamster-mgmt]
+    env:
+      ARM_USE_AZUREAD: "true"
+      ARM_USE_CLI: "true"
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_VAR_helpdesk_dns_label: ${{ vars.TF_VAR_HELPDESK_DNS_LABEL }}
+      TF_VAR_operator_dns_label: ${{ vars.TF_VAR_OPERATOR_DNS_LABEL }}
+      TF_VAR_private_only: "true"
+      TF_VAR_additional_key_vault_admin_object_ids: ${{ vars.TF_VAR_KEY_VAULT_ADMIN_OBJECT_IDS }}
+      TF_VAR_ssh_public_key_path: ${{ github.workspace }}/.ci/id_ed25519.pub
+      TF_VAR_vpn_root_certificate_base64: ${{ vars.TF_VPN_ROOT_CERTIFICATE_BASE64 }}
+      TF_SSH_PUBLIC_KEY: ${{ vars.TF_SSH_PUBLIC_KEY }}
+      AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+      KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
+      RECOVERY_ARCHIVE_PASSWORD: ${{ secrets.RECOVERY_ARCHIVE_PASSWORD }}
+      RECOVERY_ROOT: /opt/vkickhamster/recovery
+
+    steps:
+      - name: Sprawdz potwierdzenie operacji
+        shell: bash
+        run: |
+          case "${{ inputs.phase }}" in
+            prepare-backup)
+              ;;
+            destroy-workload)
+              test "${{ inputs.confirmation }}" = "DESTROY-WORKLOAD"
+              ;;
+            recreate-infrastructure)
+              test "${{ inputs.confirmation }}" = "APPLY-RECOVERY"
+              ;;
+          esac
+
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v7
+
+      - name: Zaloguj Managed Identity
+        run: az login --identity --output none
+
+      - name: Zainstaluj Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.6
+          terraform_wrapper: false
+
+      - name: Przygotuj klucz i hosty prywatne
+        run: |
+          mkdir -p .ci ~/.ssh "$RECOVERY_ROOT"
+          chmod 700 ~/.ssh "$RECOVERY_ROOT"
+          printf '%s\n' "$TF_SSH_PUBLIC_KEY" > .ci/id_ed25519.pub
+          chmod 600 .ci/id_ed25519.pub
+          ssh-keyscan -H 10.10.1.4 10.10.1.5 10.10.5.4 >> ~/.ssh/known_hosts 2>/dev/null || true
+          sort -u ~/.ssh/known_hosts -o ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Wykonaj i zaszyfruj kopie recovery
+        if: ${{ inputs.phase == 'prepare-backup' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +'%Y%m%dT%H%M%SZ')
+          STAGE="$RECOVERY_ROOT/stage-$TIMESTAMP"
+          ARCHIVE="$RECOVERY_ROOT/vkickhamster-recovery-$TIMESTAMP.tar.gz.enc"
+          mkdir -p "$STAGE/storage" "$STAGE/keyvault"
+          chmod 700 "$STAGE" "$STAGE/keyvault"
+
+          ssh -o BatchMode=yes azureuser@10.10.5.4 \
+            'sudo -u postgres pg_dump --format=custom --dbname=helpdesk' \
+            > "$STAGE/postgresql.dump"
+          test -s "$STAGE/postgresql.dump"
+
+          STORAGE_KEY=$(az storage account keys list \
+            --resource-group rg-helpdesk-prod \
+            --account-name "$AZURE_STORAGE_ACCOUNT" \
+            --query '[0].value' --output tsv)
+          for CONTAINER in attachments backups certificates documentation acme; do
+            mkdir -p "$STAGE/storage/$CONTAINER"
+            az storage blob download-batch \
+              --account-name "$AZURE_STORAGE_ACCOUNT" \
+              --account-key "$STORAGE_KEY" \
+              --source "$CONTAINER" \
+              --destination "$STAGE/storage/$CONTAINER" \
+              --no-progress --only-show-errors
+          done
+          unset STORAGE_KEY
+
+          az keyvault secret list --vault-name "$KEY_VAULT_NAME" \
+            --query '[].name' --output tsv > "$STAGE/keyvault/secret-names.txt"
+          while IFS= read -r SECRET_NAME; do
+            test -n "$SECRET_NAME" || continue
+            az keyvault secret show --vault-name "$KEY_VAULT_NAME" \
+              --name "$SECRET_NAME" --query value --output tsv \
+              > "$STAGE/keyvault/$SECRET_NAME"
+            chmod 600 "$STAGE/keyvault/$SECRET_NAME"
+          done < "$STAGE/keyvault/secret-names.txt"
+
+          terraform init -reconfigure -backend-config="use_azuread_auth=true" >/dev/null
+          terraform state pull > "$STAGE/terraform.tfstate.backup"
+          git rev-parse HEAD > "$STAGE/github-commit.txt"
+          printf '%s\n' "$AZURE_STORAGE_ACCOUNT" > "$STAGE/original-storage-account.txt"
+          printf '%s\n' "$KEY_VAULT_NAME" > "$STAGE/original-key-vault.txt"
+
+          tar -C "$STAGE" -czf - . | openssl enc -aes-256-cbc -pbkdf2 -salt \
+            -pass env:RECOVERY_ARCHIVE_PASSWORD -out "$ARCHIVE"
+          sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -pass env:RECOVERY_ARCHIVE_PASSWORD -in "$ARCHIVE" | tar -tzf - >/dev/null
+          rm -rf "$STAGE"
+          ln -sfn "$ARCHIVE" "$RECOVERY_ROOT/latest.tar.gz.enc"
+          ln -sfn "$ARCHIVE.sha256" "$RECOVERY_ROOT/latest.tar.gz.enc.sha256"
+          echo "RECOVERY_ARCHIVE=$ARCHIVE"
+          cat "$ARCHIVE.sha256"
+
+      - name: Sprawdz istnienie kopii recovery
+        if: ${{ inputs.phase != 'prepare-backup' }}
+        run: |
+          test -s "$RECOVERY_ROOT/latest.tar.gz.enc"
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -pass env:RECOVERY_ARCHIVE_PASSWORD \
+            -in "$RECOVERY_ROOT/latest.tar.gz.enc" | tar -tzf - >/dev/null
+
+      - name: Zainicjalizuj produkcyjny stan Terraform
+        if: ${{ inputs.phase != 'prepare-backup' }}
+        run: |
+          terraform init -reconfigure -backend-config="use_azuread_auth=true"
+          terraform validate
+
+      - name: Usun warstwe robocza i zachowaj punkt odtwarzania
+        if: ${{ inputs.phase == 'destroy-workload' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t RESOURCES < <(terraform state list | grep -vE \
+            '^(data\.|azurerm_resource_group\.main$|azurerm_virtual_network\.main$|azurerm_subnet\.)')
+          test "${#RESOURCES[@]}" -gt 20
+          TARGETS=()
+          for RESOURCE in "${RESOURCES[@]}"; do
+            TARGETS+=("-target=$RESOURCE")
+          done
+          printf '%s\n' "${RESOURCES[@]}" > "$RECOVERY_ROOT/destroyed-resources.txt"
+          terraform destroy -auto-approve -lock-timeout=5m "${TARGETS[@]}"
+          terraform state list | tee "$RECOVERY_ROOT/preserved-resources.txt"
+
+      - name: Odtworz infrastrukture ze stanu i kodu GitHub
+        if: ${{ inputs.phase == 'recreate-infrastructure' }}
+        run: terraform apply -auto-approve -lock-timeout=5m
