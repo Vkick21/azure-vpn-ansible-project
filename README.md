@@ -144,6 +144,7 @@ Aktualizacja kosztorysu:
 - [Plan optymalizacji kosztow](docs/cost-optimization-plan.md)
 - [Microsoft Entra ID](docs/entra-id.md)
 - [GitHub Actions na VM zarzadzajacej](docs/github-runner.md)
+- `recovery-readiness.yml` — test planu odtworzenia z pustego stanu, playbooków, danych i backupu bez wykonywania `terraform apply`;
 - [Migracja tylko przez VPN](docs/private-only-migration.md)
 - [Dowody wdrożenia i testów](docs/evidence/test-summary.md)
 

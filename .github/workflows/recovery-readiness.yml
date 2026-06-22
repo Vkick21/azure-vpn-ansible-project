@@ -1,0 +1,155 @@
+name: Recovery readiness test - no apply
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recovery-readiness
+  cancel-in-progress: false
+
+jobs:
+  recovery-test:
+    name: Plan odtworzenia i test danych
+    environment: production
+    runs-on: [self-hosted, linux, vkickhamster-mgmt]
+    env:
+      ARM_USE_AZUREAD: "true"
+      ARM_USE_CLI: "true"
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_VAR_helpdesk_dns_label: ${{ vars.TF_VAR_HELPDESK_DNS_LABEL }}
+      TF_VAR_operator_dns_label: ${{ vars.TF_VAR_OPERATOR_DNS_LABEL }}
+      TF_VAR_private_only: "true"
+      TF_VAR_additional_key_vault_admin_object_ids: ${{ vars.TF_VAR_KEY_VAULT_ADMIN_OBJECT_IDS }}
+      TF_VAR_ssh_public_key_path: ${{ github.workspace }}/.ci/id_ed25519.pub
+      TF_VAR_vpn_root_certificate_base64: ${{ vars.TF_VPN_ROOT_CERTIFICATE_BASE64 }}
+      TF_SSH_PUBLIC_KEY: ${{ vars.TF_SSH_PUBLIC_KEY }}
+      HELPDESK_FQDN: ${{ vars.HELPDESK_FQDN }}
+      HELPDESK_OPERATOR_FQDN: ${{ vars.HELPDESK_OPERATOR_FQDN }}
+      HELPDESK_PUBLIC_IP: ${{ vars.HELPDESK_PUBLIC_IP }}
+      HELPDESK_PRIVATE_IP: ${{ vars.HELPDESK_PRIVATE_IP }}
+      HELPDESK_DATABASE_IP: ${{ vars.HELPDESK_DATABASE_IP }}
+      AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+      KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
+      ENTRA_TENANT_ID: ${{ vars.ENTRA_TENANT_ID }}
+      ENTRA_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
+      ENTRA_OPERATOR_GROUP_ID: ${{ vars.ENTRA_OPERATOR_GROUP_ID }}
+      RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
+
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v7
+
+      - name: Zaloguj Managed Identity
+        run: az login --identity --output none
+
+      - name: Zainstaluj Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.6
+          terraform_wrapper: false
+
+      - name: Przygotuj pliki testowe
+        run: |
+          rm -rf .terraform bootstrap/.terraform
+          rm -f /tmp/vkickhamster-recovery-*.tfstate
+          mkdir -p .ci recovery-output
+          printf '%s\n' "$TF_SSH_PUBLIC_KEY" > .ci/id_ed25519.pub
+
+      - name: Waliduj glowna infrastrukture i bootstrap
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false
+          terraform validate
+          terraform -chdir=bootstrap init -backend=false
+          terraform -chdir=bootstrap validate
+
+      - name: Zaplanuj glowna infrastrukture z pustego stanu
+        run: |
+          set -o pipefail
+          terraform plan \
+            -refresh=false \
+            -lock=false \
+            -state=/tmp/vkickhamster-recovery-main.tfstate \
+            -out=recovery-output/main.tfplan \
+            -no-color | tee recovery-output/main-plan.txt
+          terraform show -json recovery-output/main.tfplan > recovery-output/main-plan.json
+
+      - name: Zaplanuj odtworzenie runnera z pustego stanu
+        run: |
+          set -o pipefail
+          terraform -chdir=bootstrap plan \
+            -refresh=false \
+            -lock=false \
+            -state=/tmp/vkickhamster-recovery-bootstrap.tfstate \
+            -var="ssh_public_key_path=${{ github.workspace }}/.ci/id_ed25519.pub" \
+            -out="${{ github.workspace }}/recovery-output/bootstrap.tfplan" \
+            -no-color | tee recovery-output/bootstrap-plan.txt
+          terraform show -json recovery-output/bootstrap.tfplan > recovery-output/bootstrap-plan.json
+
+      - name: Sprawdz zakres planow odtworzenia
+        run: |
+          MAIN_CREATE=$(jq '[.resource_changes[]? | select(.change.actions | index("create"))] | length' recovery-output/main-plan.json)
+          MAIN_DELETE=$(jq '[.resource_changes[]? | select(.change.actions | index("delete"))] | length' recovery-output/main-plan.json)
+          BOOTSTRAP_CREATE=$(jq '[.resource_changes[]? | select(.change.actions | index("create"))] | length' recovery-output/bootstrap-plan.json)
+          BOOTSTRAP_DELETE=$(jq '[.resource_changes[]? | select(.change.actions | index("delete"))] | length' recovery-output/bootstrap-plan.json)
+
+          {
+            echo "VKICKHAMSTER - raport gotowosci odtworzenia"
+            echo "Data UTC: $(date -u +'%Y-%m-%d %H:%M:%S')"
+            echo "Glowna infrastruktura - zasoby do utworzenia: $MAIN_CREATE"
+            echo "Glowna infrastruktura - zasoby do usuniecia: $MAIN_DELETE"
+            echo "Bootstrap runnera - zasoby do utworzenia: $BOOTSTRAP_CREATE"
+            echo "Bootstrap runnera - zasoby do usuniecia: $BOOTSTRAP_DELETE"
+            echo "Terraform Apply: NIE WYKONANO"
+          } | tee recovery-output/README.txt
+
+          test "$MAIN_CREATE" -gt 0
+          test "$BOOTSTRAP_CREATE" -gt 0
+          test "$MAIN_DELETE" -eq 0
+          test "$BOOTSTRAP_DELETE" -eq 0
+
+      - name: Sprawdz skladnie wszystkich playbookow
+        working-directory: ansible
+        run: |
+          ansible-galaxy collection install ansible.posix
+          for playbook in \
+            backup-postgresql.yml \
+            authorize-management-runner.yml \
+            deploy-code-only.yml \
+            deploy-helpdesk.yml \
+            https.yml \
+            nginx.yml \
+            postgresql.yml \
+            provision-client.yml \
+            manage-operator.yml \
+            verify-helpdesk.yml
+          do
+            ansible-playbook -i inventory.ini "$playbook" --syntax-check
+          done
+
+      - name: Dodaj klucze hostow prywatnych
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -H 10.10.1.4 10.10.1.5 10.10.5.4 >> ~/.ssh/known_hosts
+          sort -u ~/.ssh/known_hosts -o ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Potwierdz uslugi, dane, zalacznik i backup
+        working-directory: ansible
+        run: ansible-playbook -i inventory.ini verify-helpdesk.yml
+
+      - name: Zachowaj raport testu
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: recovery-readiness-report
+          path: |
+            recovery-output/README.txt
+            recovery-output/main-plan.txt
+            recovery-output/bootstrap-plan.txt
+          retention-days: 14
