@@ -34,10 +34,15 @@ function Set-HostsFileWithRetry {
 
     for ($Attempt = 1; $Attempt -le $Attempts; $Attempt++) {
         try {
-            Set-Content -LiteralPath $HostsPath -Value $Lines -Encoding ascii
+            # Bezposredni zapis .NET omija sporadyczny blad strumienia Set-Content.
+            [System.IO.File]::WriteAllLines(
+                $HostsPath,
+                [string[]]$Lines,
+                [System.Text.Encoding]::ASCII
+            )
             return
         }
-        catch [System.IO.IOException] {
+        catch {
             if ($Attempt -eq $Attempts) {
                 throw
             }
