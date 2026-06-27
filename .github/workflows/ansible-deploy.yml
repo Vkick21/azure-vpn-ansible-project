@@ -8,6 +8,8 @@ on:
         required: true
         type: choice
         options:
+          - postgresql.yml
+          - deploy-helpdesk.yml
           - verify-helpdesk.yml
           - deploy-code-only.yml
           - https.yml
