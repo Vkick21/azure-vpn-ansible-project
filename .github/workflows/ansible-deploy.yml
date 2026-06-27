@@ -43,6 +43,16 @@ jobs:
       - name: Pobierz repozytorium
         uses: actions/checkout@v7
 
+      - name: Zaloguj Managed Identity
+        run: az login --identity --output none
+
+      - name: Pobierz haslo PostgreSQL z Key Vault
+        if: ${{ inputs.playbook == 'postgresql.yml' }}
+        run: |
+          database_password="$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name database-password --query value --output tsv)"
+          echo "::add-mask::$database_password"
+          echo "HELPDESK_DB_PASSWORD=$database_password" >> "$GITHUB_ENV"
+
       - name: Zainstaluj kolekcje Ansible
         run: ansible-galaxy collection install ansible.posix
 
