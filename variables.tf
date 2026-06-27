@@ -68,7 +68,7 @@ variable "operator_dns_label" {
 variable "private_only" {
   description = "Udostepnia caly Helpdesk tylko przez VPN i jeden prywatny Load Balancer"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "additional_key_vault_admin_object_ids" {
