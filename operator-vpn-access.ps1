@@ -86,9 +86,9 @@ if ($Action -eq "Add") {
 
 # Usuwamy stary i nowy wpis tej aplikacji bez zmiany pozostalych linii hosts.
 $CurrentLines = Get-Content -LiteralPath $HostsPath
-$RemainingLines = $CurrentLines | Where-Object {
+$RemainingLines = @($CurrentLines | Where-Object {
     $_ -notmatch [regex]::Escape($ManagedMarker)
-}
+})
 
 if ($Action -eq "Add") {
     foreach ($ManagedDomain in $ManagedDomains) {
