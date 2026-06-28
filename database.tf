@@ -36,18 +36,6 @@ resource "azurerm_network_security_group" "database" {
     destination_address_prefix = "*"
   }
 
-  security_rule {
-    name                       = "AllowSSHFromBastion"
-    priority                   = 1020
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefix      = "10.10.4.0/26"
-    destination_address_prefix = "*"
-  }
-
   # Pozostaly ruch z VNetu nie powinien docierac do bazy.
   security_rule {
     name                       = "DenyOtherVnetInbound"

@@ -112,17 +112,6 @@ resource "azurerm_network_security_group" "app" {
     source_address_prefix      = "10.10.2.10/32"
     destination_address_prefix = "*"
   }
-  security_rule {
-    name                       = "AllowSSHFromBastion"
-    priority                   = 1010
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefix      = "10.10.4.0/26"
-    destination_address_prefix = "*"
-  }
   dynamic "security_rule" {
     for_each = var.private_only ? [] : [1]
     content {
