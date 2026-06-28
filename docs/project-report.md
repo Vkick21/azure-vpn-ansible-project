@@ -4,7 +4,7 @@
 
 Celem projektu było przygotowanie funkcjonalnego środowiska Helpdesk w Microsoft Azure. Rozwiązanie łączy dostęp do usługi wyłącznie przez VPN, automatyzację infrastruktury, bazę danych, kopie zapasowe i podstawowe mechanizmy bezpieczeństwa.
 
-Projekt został przygotowany jako środowisko demonstracyjne, ale wykorzystuje rozwiązania spotykane w systemach produkcyjnych: Infrastructure as Code, segmentację sieci, wysoką dostępność warstwy aplikacyjnej, Managed Identity, Key Vault i centralny monitoring.
+Projekt został przygotowany jako środowisko demonstracyjne, ale wykorzystuje rozwiązania spotykane w systemach produkcyjnych: Infrastructure as Code, segmentację sieci, wysoką dostępność warstwy aplikacyjnej, Managed Identity, Key Vault, platformowe metryki Azure Monitor i przygotowaną konfigurację centralnego monitorowania.
 
 ## 2. Zastosowane technologie
 
@@ -150,7 +150,7 @@ Po wdrożeniu wykonano następujące testy:
 | HTTPS wychodzący z wszystkich VM | poprawny |
 | reCAPTCHA obecna w formularzu | poprawna |
 | Formularz bez tokenu reCAPTCHA | odrzucony |
-| Testy Django | 14/14 |
+| Testy Django | 16/16 |
 | Końcowy plan Terraform | No changes |
 
 Testy sieciowe po zmianach NSG nie wprowadzały danych do produkcyjnej bazy.
