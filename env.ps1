@@ -77,8 +77,8 @@ switch ($Action)
     }
 
     "cost-plan" {
-        # VPN pozostaje wymagany, dlatego oszczednosci dotycza Bastiona.
-        Write-Host "Cost plan only - Bastion would be removed, VPN stays enabled. No apply is executed."
+        # Finalny wariant nie zawiera Bastiona, a wymagany VPN pozostaje wlaczony.
+        Write-Host "Cost plan only - Bastion stays disabled and VPN stays enabled. No apply is executed."
         terraform plan -var="enable_bastion=false" -var="enable_vpn=true"
     }
 }

@@ -178,7 +178,7 @@
         path: /etc/nginx/ssl/vkickhamster/fullchain.pem
       register: tls_certificate
 
-    # Panel administratora jest dostepny tylko od strony VPN lub Bastiona.
+    # Panel administratora jest dostepny tylko po polaczeniu VPN.
     # Nginx moze przejsc do zebranych plikow, ale nie dostaje prawa listowania katalogu domowego.
     - name: Daj Nginx dostep do katalogu aplikacji
       ansible.posix.acl:

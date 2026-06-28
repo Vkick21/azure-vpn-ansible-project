@@ -156,7 +156,7 @@ Zwykly plan potwierdza zgodnosc dzialajacego srodowiska:
 .\env.ps1 -Action plan
 ```
 
-Plan oszczedny usuwa tylko Bastiona, zachowuje wymagany VPN i nie wykonuje `terraform apply`:
+Plan oszczedny potwierdza wariant bez Bastiona, zachowuje wymagany VPN i nie wykonuje `terraform apply`:
 
 ```powershell
 .\env.ps1 -Action cost-plan
