@@ -109,7 +109,7 @@
           Environment=ENTRA_TENANT_ID={{ entra_tenant_id }}
           Environment=ENTRA_CLIENT_ID={{ entra_client_id }}
           Environment=ENTRA_OPERATOR_GROUP_ID={{ entra_operator_group_id }}
-          Environment=RECAPTCHA_ENABLED=true
+          Environment=RECAPTCHA_ENABLED=false
           Environment=RECAPTCHA_SITE_KEY={{ recaptcha_site_key }}
           ExecStart={{ app_venv }}/bin/gunicorn --workers 2 --threads 2 --bind 127.0.0.1:8000 helpdesk.wsgi:application
           Restart=always

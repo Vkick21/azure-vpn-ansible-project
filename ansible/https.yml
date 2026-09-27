@@ -161,7 +161,7 @@
         state: present
         update_cache: true
         cache_valid_time: 3600
-      when: inventory_hostname == groups['helpdesk'][0]
+      when: false  # Demo: certyfikat przygotowany osobno w Storage
 
     # Pierwszy serwer odnawia certyfikat, a oba pobieraja te sama kopie ze Storage.
     - name: Pobierz lub odnow certyfikat Let's Encrypt
@@ -189,7 +189,7 @@
           - --register-unsafely-without-email
           - --non-interactive
           - --keep-until-expiring
-      when: inventory_hostname == groups['helpdesk'][0]
+      when: false  # Demo: certyfikat przygotowany osobno w Storage
       register: certbot_result
       changed_when: "'Successfully received certificate' in certbot_result.stdout"
 
@@ -201,7 +201,7 @@
           - upload
           - "/etc/letsencrypt/live/{{ helpdesk_domain }}/fullchain.pem"
           - "/etc/letsencrypt/live/{{ helpdesk_domain }}/privkey.pem"
-      when: inventory_hostname == groups['helpdesk'][0]
+      when: false  # Demo: certyfikat przygotowany osobno w Storage
       changed_when: false
 
     - name: Pobierz certyfikat na kazdy serwer
