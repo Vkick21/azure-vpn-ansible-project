@@ -4,7 +4,7 @@
 {% block heading %}Opisz swój problem{% endblock %}
 
 {% block content %}
-<p class="lead">Test SAN Jan</p>
+<p class="lead">Wypelnij formularz. Zgloszenie trafi do zespolu wsparcia.</p>
 <form method="post" enctype="multipart/form-data" class="card">
   {% csrf_token %}
   {{ form.as_p }}
